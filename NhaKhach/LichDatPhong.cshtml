@@ -1,0 +1,318 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.LichDatPhongModel
+
+
+@{
+    ViewData["Title"] = "Lịch đặt phòng";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+<style>
+    .color {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .color-cell {
+        width: 10px;
+        height: 10px;
+        margin-top: 5px;
+    }
+
+    .color-sp {
+        white-space: nowrap;
+        margin-right: 10px;
+        padding-left: 5px;
+    }
+
+    .show-appointment {
+        padding-top: 5px;
+        font-size: 11px;
+        white-space: normal;
+    }
+
+    .show-tooltip {
+        text-align: left;
+        margin-left: 10px;
+        display: flex;
+    }
+
+    .tooltip-text {       
+        white-space: normal;
+    }
+
+    .tooltip-title {
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+
+
+</style>
+
+
+<h2 class="content-block titlePage"> Lịch đặt phòng </h2>
+
+
+@(Html.DevExtreme().LoadPanel()
+    .ID("loadpanel")
+    .Position(p => p.Of("#grid"))
+    .Visible(false)
+    .ShowIndicator(true)
+    .ShowPane(true)
+    .HideOnOutsideClick(false)
+)
+
+<div class="dx-field col-12" style="padding:0px;">
+    <div class="dx-field-label col-6" style="padding:0px;">
+        <span><b>Trạng thái lịch đặt:</b> </span>
+        <div class="color">
+            <div class="color-cell" style="background-color: #b30000;"></div> <span class="color-sp"> Đã đặt</span>
+            <div class="color-cell" style="background-color: #ffa500;"></div> <span class="color-sp"> Đã nhận phòng</span>
+            <div class="color-cell" style="background-color: #009900;"></div> <span class="color-sp"> Hoàn thành</span>
+            <div class="color-cell" style="background-color: #808080;"></div> <span class="color-sp"> Đã hủy</span>
+            <div class="color-cell" style="background-color: #b8b894;"></div> <span class="color-sp"> Lịch quá hạn</span>
+        </div>
+    </div> 
+</div>
+
+<div class="dx-field" style="display:flex; margin-top: 20px; gap: 20px;">  
+        @(Html.DevExtreme().Button()
+            .Text("Thêm lịch mới")
+            .OnClick("function() { window.location.href = '/NhaKhach/TaoDatPhong'; }")
+            .Width("auto")
+            .Type(ButtonType.Default)
+        )
+   
+        @(Html.DevExtreme().Lookup()
+            .ID("selectphong")
+            .DataSource(d => d.OData().Version(4)
+                .Url("https://tms.tvu.edu.vn:10220/api/GhPhongs").Expand("Loai")
+                .Key("Id").BeforeSend("dvtm")
+            )
+            .DataSourceOptions(s => s.Filter(" ['TrangThai', '=', false] "))
+            .ValueExpr("Id")
+            .DisplayExpr(new JS("phong_displayExpr"))
+            .ShowClearButton(true)
+            .Placeholder("Tất cả phòng")
+            .Width(250)
+            .OnValueChanged(@<text>
+                function(e){
+                    CheckFilter(e);
+                    var lookupInstance = e.component;
+                    lookupInstance.close();
+                }
+            </text>)
+        )
+
+        @(Html.DevExtreme().CheckBox()
+            .ID("checklich")
+            .Text("Lịch cá nhân")
+            .OnValueChanged("CheckFilter")
+       )
+</div>
+
+
+@(Html.DevExtreme().Scheduler()
+    .ID("scheduler")
+    .DataSource(d => d.OData().Version(4)
+        .Url("https://tms.tvu.edu.vn:10220/api/GhDatPhongs").Expand("Phong", "Phong.Loai", "TinhTrang", "NguoiThucHien", "NguoiDat")
+        .Key("Id").BeforeSend("dvtm")
+    )    
+    .DataSourceOptions(s => s.Filter(" [ ['Phong.TrangThai', '=', false], 'and', ['TinhTrangId', '<>', 5], 'and', ['TinhTrangId', '<>', 6] ] "))
+    .Views(views =>
+    {
+        views.Add().Type(SchedulerViewType.Day);
+        views.Add().Type(SchedulerViewType.Week);
+        views.Add().Type(SchedulerViewType.Month);
+    })
+    .StartDayHour(6)
+    .EndDayHour(18)   
+    .CellDuration(60)
+    .CurrentView(SchedulerViewType.Month)
+    .CurrentDate(DateTime.Now)
+    .FirstDayOfWeek(FirstDayOfWeek.Monday)
+    .TimeZone("Asia/Ho_Chi_Minh")
+    .StartDateExpr("TuNgay")
+    .EndDateExpr("DenNgay")
+    .TextExpr("Phong.TenPhong")
+    .AllDayExpr("AllDay")
+    .Height(700)  
+    .ShowCurrentTimeIndicator(true)     
+    .RecurrenceRuleExpr("RecurrenceRule")
+    .Resources(r => {
+         r.Add().FieldExpr("PhongId").AllowMultiple(false)
+            .Label("Phòng")
+            .DataSource(d => d.OData().Version(4)
+                .Url("https://tms.tvu.edu.vn:10220/api/GhPhongs")
+                .Key("Id").BeforeSend("dvtm")            
+            )
+            .DataSourceOptions(s => s.Filter(" [ 'TrangThai', '=', false ] "))
+            .ValueExpr("Id").DisplayExpr("TenPhong");
+    })
+    .Editing(e => e.AllowUpdating(false).AllowDragging(false).AllowResizing(false).AllowDeleting(false))
+    .AppointmentTemplate(@<text>
+        <div class="show-appointment">
+            <div> <%- targetedAppointmentData.Phong.MaPhong %> - <%- targetedAppointmentData.Id %> </div>           
+        </div>
+    </text>)
+    .AppointmentTooltipTemplate(@<text>
+       <div class="show-tooltip">           
+            <div class="tooltip-text">
+            <div class="tooltip-title">Lịch: <%- targetedAppointmentData.Id %> - <%- targetedAppointmentData.Phong.MaPhong %> - <%- targetedAppointmentData.Phong.Loai.TenLoai %> </div>
+                <div>Người đặt:<%- targetedAppointmentData.NguoiDat.FullName %> </div>                        
+                <div>Thời gian: 
+                    <% 
+                        const tu = new Date(targetedAppointmentData.TuNgay);
+                        const den = new Date(targetedAppointmentData.DenNgay);
+                        const sameday = tu.toLocaleDateString() === den.toLocaleDateString();
+                        const allday = tu.getHours() === 0 && tu.getMinutes() === 0 && ( (den.getHours() === 23 && den.getMinutes() === 59) || (den.getHours() === 0 && den.getMinutes() === 0 && tu.toLocaleDateString() != den.toLocaleDateString()) );
+                    %>
+
+                    <% if(sameday && allday) { %>
+                        <%- tu.toLocaleDateString() %>
+                    <% } else if (!sameday && allday) { %>
+                        <%- tu.toLocaleDateString() %> - <%- den.toLocaleDateString() %>
+                    <% } else if (sameday) { %>
+                        <%- tu.toLocaleDateString() %> ( <%- formatTime(tu) %> - <%- formatTime(den) %> )
+                    <% } else { %>
+                        <%- tu.toLocaleDateString() %> - <%- den.toLocaleDateString() %> ( <%- formatTime(tu) %> - <%- formatTime(den) %> )
+                    <% } %>
+
+                </div>               
+
+            </div>
+
+        </div>
+    </text>)
+    .AppointmentDragging(d => d.OnDragStart(@<text> function(e){ e.cancel =  true; } </text>))
+    .OnAppointmentFormOpening("onAppointmentFormOpening")
+    .OnAppointmentRendered("AppointmentRendered")   
+
+)
+
+
+
+
+
+<script>
+    var formatTime = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "numeric" }).format;
+
+    //Dropdown phòng
+    function phong_displayExpr(item) {
+        if (!item) {
+            return "";
+        }
+        return item.MaPhong + " - " + item.TenPhong;
+    }
+
+    //Màu sắc lịch
+    function AppointmentRendered(e) {
+        const statusColors = {
+            1: " #b30000",    // Đã đặt
+            2: " #ffa500",  // Đã nhận phòng
+            3: " #009900",   // Hoàn thành
+            4: " #808080", // Đã hủy
+        };
+
+        let color = e.appointmentData.TrangThai === true ? "#b8b894" : (statusColors[e.appointmentData.TinhTrangId] || "blue");
+
+        if (e.appointmentElement && e.appointmentElement[0]) {
+            e.appointmentElement[0].style.backgroundColor = color;
+            e.appointmentElement[0].style.color = "#fff";
+        }
+    }
+
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+    
+    function onAppointmentFormOpening(e) {
+        e.cancel = true;
+
+        if (e.appointmentData.Id === undefined) {
+            var phong = $("#selectphong").dxLookup("instance").option("value");
+            if (phong == null) {
+                DevExpress.ui.notify("Vui lòng chọn phòng muốn đặt", "warning", 3000);
+                return;
+            }
+
+            var start = e.appointmentData.TuNgay.toLocaleDateString();
+            var end = e.appointmentData.DenNgay.toLocaleDateString();            
+          
+            var denghiId = getQueryParam('denghi');
+            var khachId = getQueryParam('khach');
+           
+           window.location.href = 'TaoDatPhong?start=' + start + '&end=' + end + '&phong=' + phong + '&denghi=' + denghiId + '&khach=' + khachId;          
+        }
+        else {
+           //Chuyển chi tiết lịch         
+            ChuyenTrang(e.appointmentData.Id);            
+        }
+    }
+
+    function ChuyenTrang(idlich) {
+        console.log("id ", idlich);
+        $.ajax({
+            type: "POST",
+            url: 'LichDatPhong?handler=QuyenChuyenTrang',
+            data: { lichId: idlich },
+            success: function (data) {
+                if (data.success) {
+                    window.location.href = 'ChiTietLichDat?id=' + data.ldID;
+                } else {
+                    DevExpress.ui.notify("Bạn không có quyền xem chi tiết lịch đặt này", "warning", 3000);
+                }
+            },
+            error: function () {
+                DevExpress.ui.notify("Lỗi", "error", 3000);
+            }
+        }).done(function (data) {
+
+        });
+    }
+
+    //Lọc lịch
+    function CheckFilter(e) {
+        var phong = $("#selectphong").dxLookup("instance").option("value");
+        var lich = $("#checklich").dxCheckBox("instance").option("value");
+
+        var FilterLich = [["Phong.TrangThai", "=", false], "and", ["TinhTrangId", "<>", 5], 'and', ['TinhTrangId', '<>', 6]]; //điều kiện lọc ban đầu
+        if (lich && phong > 0) {
+            FilterLich = [FilterLich, "and", ["NguoiDatId", "=", @Model.VienChucId], "and", ["PhongId", "=", phong]];
+        } else if (lich) {
+            FilterLich = [FilterLich, "and", ["NguoiDatId", "=", @Model.VienChucId]];
+        } else if (phong > 0) {
+            FilterLich = [FilterLich, "and", ["PhongId", "=", phong]];
+        }
+
+        var scheduler = $("#scheduler").dxScheduler("instance");
+        var data = scheduler.getDataSource();
+        data.filter(FilterLich);
+        data.load();
+        scheduler.repaint();
+    }
+
+
+
+    //Lịch quá hạn
+    function updateScheduler() {
+        $.ajax({
+            type: "POST",
+            url: 'LichDatPhong?handler=UpdateLichQuaHan',
+            success: function () {                
+            },
+            error: function () {
+                DevExpress.ui.notify("Có lỗi xảy ra khi cập nhật trạng thái lịch.", "error", 2000);
+            }
+        });
+    }
+    setInterval(updateScheduler, 86400000); //Cập nhật mỗi ngày
+    updateScheduler();
+
+
+
+</script>
+
+

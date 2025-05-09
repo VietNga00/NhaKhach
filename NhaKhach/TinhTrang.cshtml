@@ -1,0 +1,129 @@
+﻿ @page
+@model TMSWeb_Core.Pages.NhaKhach.TinhTrangModel
+@using TMS_ModelCore.Models
+
+
+@{
+    ViewData["Title"] = "Tình trạng lịch";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+
+<h2 class="content-block titlePage">Tình trạng lịch</h2>
+
+
+
+@(Html.DevExtreme().DataGrid<GhTinhTrang>()
+    .ID("grid")
+    .DataSource(d => d.OData().Version(4)
+        .Url("https://tms.tvu.edu.vn:10220/api/GhTinhTrangs")
+        .Key("Id").BeforeSend("dvtm")
+    )
+    .ShowBorders(true)
+    .FilterRow(f => f.Visible(true))
+    .FocusedRowEnabled(true)
+    .FocusedRowIndex(0)
+    .HeaderFilter(h => h.Visible(true))
+    .SearchPanel(s => s 
+        .Visible(true)
+        .Width("auto")
+        .Placeholder("Nhập từ khóa tìm kiếm...")
+    )
+    .Export(e => e
+        .Enabled(true)
+        .AllowExportSelectedData(true)
+    )
+    .ColumnAutoWidth(true)
+    .AllowColumnResizing(true)
+    .ColumnHidingEnabled(true)
+    .Columns(columns =>
+    {
+        columns.Add().Caption("STT").CellTemplate(new JS("SoThuTu"));
+        columns.AddFor(m => m.TenTinhTrang).Caption("Tên tình trạng");
+        columns.AddFor(m => m.MoTa).Caption("Mô tả");          
+    })
+    .Paging(p => p.PageSize(10))
+   .Pager(p => p
+        .Visible(true)
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+        .ShowInfo(true)
+   )
+    .Editing(e => e
+        .AllowAdding(true)
+        .AllowUpdating(true)   
+        .Mode(GridEditMode.Popup).UseIcons(true)
+        .Popup(p => p
+            .ShowTitle(true)
+            .MaxWidth(500)
+            .MaxHeight(300)
+            .Position(pos => pos
+                .My(HorizontalAlignment.Center, VerticalAlignment.Center)
+                .At(HorizontalAlignment.Center, VerticalAlignment.Center)
+                .Of(new JS("window"))
+            )
+        )
+        .Form(f => f.ID("form").ColCount(1).Items(items =>
+            {
+                items.AddSimpleFor(m => m.TenTinhTrang).IsRequired(true);
+                items.AddSimpleFor(m => m.MoTa).IsRequired(true);     
+            })       
+        )
+    )
+    .OnRowValidating("validateRow")
+    .OnInitNewRow("setNew")
+    .OnEditingStart("setEdit")
+    .OnRowUpdating("setEdit")
+)
+
+
+<script>
+    function validateRow(e) {
+        var gridInstance = $("#grid").dxDataGrid("instance").getDataSource();
+        var gridData = gridInstance ? gridInstance.items() : []; // Lấy danh sách dữ liệu
+
+        var newTen = e.newData.TenTinhTrang ? e.newData.TenTinhTrang.trim().toLowerCase() : "";
+
+        // Kiểm tra
+        if (newTen && gridData.some(item => item.TenTinhTrang.trim().toLowerCase() === newTen)) {
+            e.isValid = false;
+            e.errorText = "Tên tình trạng này đã tồn tại. Vui lòng nhập tên khác!";
+        }
+    }    
+
+    $(document).ready(function () {
+
+        setTimeout(
+            function () {
+                var grid = $("#grid").dxDataGrid("instance");
+                grid.repaint();
+            }, 500);
+
+    });
+
+    function SoThuTu(container, e) {
+        var index = e.component.pageIndex() * e.component.pageSize() + e.rowIndex + 1;
+        container.text(index);
+    }
+
+    function setEdit(e) {
+        if (e.component) {
+            e.component.option("editing.popup.title", "Chỉnh sửa tình trạng");
+        }        
+
+        if (e.newData) {
+            e.newData.NgayCapNhat = new Date().toISOString();
+        }
+    }
+
+    function setNew(e) {
+        if (e.component) {
+            e.component.option("editing.popup.title", "Thêm tình trạng mới");
+        }
+
+        if (e.data) {
+            e.data.NgayTao = new Date().toISOString();
+        }
+    }
+
+</script>

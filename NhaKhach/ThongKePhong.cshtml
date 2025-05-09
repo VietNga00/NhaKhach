@@ -1,0 +1,154 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.ThongKePhongModel
+@using TMS_ModelCore.Models
+
+
+@{
+    ViewData["Title"] = "Thống kê phòng";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+@{
+    var fullData = (from phong in Model.DanhSachPhong
+                    join tk in Model.ThongKe on phong.Id equals tk.PhongId into p
+                    from tk in p.DefaultIfEmpty()
+                    select new
+                    {
+                        PhongId = phong.Id,
+                        MaPhong = phong.MaPhong,
+                        SoLichDat = tk?.SoLichDat ?? 0,
+                        SoLichHuy = tk?.SoLichHuy ?? 0,
+                        SoLichQuaHan = tk?.SoLichQuaHan ?? 0,
+                    }).ToList();
+}
+
+
+<h2 class="content-block titlePage">Thống kê theo phòng </h2>
+
+
+<div style="display:flex">
+    <div class="col-12">
+        <form method="post" style="margin-bottom: 20px;">
+            <label for="NamThongKe">Chọn năm:</label>
+            <select id="NamThongKe" name="namchon" asp-for="namchon" asp-items="new SelectList(Model.DanhSachNam)">
+                <option value="">-- Chọn năm --</option>
+            </select>
+
+            <label>Tháng: </label>
+            <select asp-for="thangchon">
+                @for (int i = 1; i <= 12; i++)
+                {
+                    <option value="@i">@i</option>
+                }
+            </select>
+
+            <button type="submit" class="btn btn-primary" style="margin-left: 20px;">Xem thống kê</button>
+        </form>
+    </div>
+</div>
+
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+<div >
+    @(Html.DevExtreme().Chart()
+        .ID("chartPhong")     
+        .Title(t => t.Text($"Thống kê phòng nhà khách tháng {Model.thangchon}/{Model.namchon} "))
+        .DataSource(fullData)
+        .CommonSeriesSettings(s => s.ArgumentField("MaPhong"))
+        .Margin(m => m.Bottom(20))        
+        .ValueAxis(a => {
+            a.Add().Name("LichDatAxis").Position(Position.Left)
+                .Label(l => l.CustomizeText(@<text>
+                    function (info) {
+                        return info.value;
+                    }
+                </text>));
+        })
+       .ArgumentAxis(a => a        
+            .ValueMarginsEnabled(true)
+            .DiscreteAxisDivisionMode(DiscreteAxisDivisionMode.BetweenLabels)            
+            .Grid(g => g.Visible(true))
+            .Label(l => l.CustomizeText(@<text>
+                function (info) {
+                    return info.value;
+                }
+            </text>))
+       )       
+        .Series(series => {
+            series.Add().ValueField("SoLichDat").Name("Lịch đặt").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b30000");
+            series.Add().ValueField("SoLichHuy").Name("Lịch hủy").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#808080");
+            series.Add().ValueField("SoLichQuaHan").Name("Lịch quá hạn").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b8b894");
+        })
+        .Legend(l => l
+            .VerticalAlignment(VerticalEdge.Top)
+            .HorizontalAlignment(HorizontalAlignment.Center)
+            .ItemTextPosition(Position.Bottom)
+        )
+        .Export(e => e.Enabled(true))
+        .Tooltip(t => t.Enabled(true)
+            .CustomizeTooltip(@<text>
+                 function (info) {
+                    var value = info.value;
+                    var seriesName = info.seriesName;
+                    if (seriesName === "Lịch đặt" || seriesName === "Lịch hủy" || seriesName === "Lịch quá hạn") {
+                        return { text: seriesName + ": " + value.toLocaleString('vi-VN') + " lịch" };               
+                    } 
+                    return { text: seriesName + ": " + value };
+            }</text>)
+        )           
+    )
+</div>
+
+<hr>
+
+
+<!-- Datagrid -->
+<div style="margin-top: 50px;">
+    <p style="font-weight:bold; font-size:25px;text-align:center">Thống kê chi tiết phòng nhà khách</p>
+    @(Html.DevExtreme().DataGrid<GhThongKePhong>()
+        .ID("gridThongKe")
+        .ShowBorders(true)
+        //.DataSource(Model.ThongKe)
+        .DataSource(d => d.OData().Version(4)
+        .Url("https://tms.tvu.edu.vn:10220/api/GhThongKePhongs").Expand("Phong")
+        .Key("Id").BeforeSend("dvtm")
+        )
+        .Columns(columns =>
+        {
+            columns.AddFor(m => m.Nam).Caption("Năm").GroupIndex(0);
+            columns.AddFor(m => m.Thang).Caption("Tháng");
+            columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
+            columns.AddFor(m => m.SoLichDat).Caption("Tổng lịch đặt");
+            columns.AddFor(m => m.SoLichHuy).Caption("Tổng lịch hủy");
+            columns.AddFor(m => m.SoLichQuaHan).Caption("Tổng lịch quá hạn");           
+        })
+        .Summary(s => s
+            .TotalItems(items =>
+            {
+                items.AddFor(m => m.SoLichDat).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.SoLichHuy).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.SoLichQuaHan).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+            })
+        )
+        .FilterRow(filterRow => filterRow.Visible(true))
+        .HeaderFilter(headerFilter => headerFilter.Visible(true))
+        .Paging(p => p.PageSize(20))
+        .Pager(p => p
+            .Visible(true)
+            .ShowPageSizeSelector(true)
+            .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+            .ShowInfo(true)
+        )
+        .SearchPanel(searchPanel => searchPanel.Visible(true))
+        )
+     
+</div>
+
+
+
+
+

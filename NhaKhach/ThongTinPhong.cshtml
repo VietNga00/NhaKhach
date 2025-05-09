@@ -1,0 +1,209 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.ThongTinPhongModel
+@using TMS_ModelCore.Models
+
+
+@{
+    ViewData["Title"] = "Quản lý Phòng";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+<h2 class="content-block titlePage">Danh sách phòng</h2>
+
+
+
+@(Html.DevExtreme().LoadPanel()
+    .ID("loadpanel")
+    .Position(p => p.Of("#grid"))
+    .Visible(false)
+    .ShowIndicator(true)
+    .ShowPane(true)
+    .HideOnOutsideClick(false)
+)
+
+@(Html.DevExtreme().DataGrid<GhPhong>()
+    .ID("grid")
+    .DataSource(d => d.OData().Version(4)
+        .Url("https://tms.tvu.edu.vn:10220/api/GhPhongs").Expand("Loai", "ToaNha")
+        .Key("Id").BeforeSend("dvtm")
+    )
+    .ShowBorders(true)
+    .FilterRow(f => f.Visible(true))
+    .FocusedRowEnabled(true)
+    .FocusedRowIndex(0)
+    .HeaderFilter(h => h.Visible(true))
+    .SearchPanel(s => s.Visible(true).Width("Auto").Placeholder("Nhập từ khóa tìm kiếm..."))
+    .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+    .ColumnAutoWidth(true)
+    .AllowColumnResizing(true)
+    .ColumnHidingEnabled(true)
+    .Columns(columns => 
+    {
+        columns.Add().Caption(" ").CellTemplate(new JS("SoThuTu"));
+        columns.AddFor(m => m.MaPhong).Caption("Mã Phòng");
+        columns.AddFor(m => m.TenPhong).Caption("Tên Phòng");
+        columns.AddFor(m => m.ToaNhaId).Caption("Tòa nhà").Lookup(lookup => lookup
+           .DataSource(d => d.OData().Version(4)
+               .Url("https://tms.tvu.edu.vn:10220/api/ToaNhas")
+               .Key("Id").BeforeSend("dvtm")
+           )
+           .DisplayExpr("TenToaNha").ValueExpr("Id")
+       );
+        columns.AddFor(m => m.LoaiId).Caption("Loại Phòng").Lookup(lookup => lookup
+            .DataSource(d => d.OData().Version(4)
+                .Url("https://tms.tvu.edu.vn:10220/api/GhLoaiPhongs")
+                .Key("Id").BeforeSend("dvtm")
+            )
+            .DisplayExpr("TenLoai").ValueExpr("Id")
+        );           
+        columns.AddFor(m => m.TrangThai).Caption("Trạng thái").Lookup(lookup => lookup
+            .DataSource(new[] {
+                new { Id = false, Name = "Đang hoạt động" },
+                new { Id = true, Name = "Tạm khóa" }
+            }).DisplayExpr("Name").ValueExpr("Id")
+        ).CellTemplate(@<text>
+            <span style="color: <%-value === false ? 'green' : 'gray' %> ">
+                <%- value === false ? 'Đang hoạt động' : 'Tạm khóa' %>
+            </span>
+        </text>);
+        columns.Add().Type(GridCommandColumnType.Buttons)
+           .Buttons(buttons =>
+           {
+               buttons.Add().Name("edit").Icon("edit").Hint("Chỉnh sửa");
+
+               buttons.Add().Name("lock").Hint("Khóa hoặc mở khóa phòng")
+                    .Template(@<text>
+                        <a href="javascript:void(0)" onclick="LockStatus(this, <%- data.Id %>, <%- data.TrangThai %>)" style="text-decoration:none;">
+                            <i class="dx-link dx-link-icon <%- data.TrangThai ? 'dx-icon-unlock' : 'dx-icon-lock' %>"></i>
+                        </a>
+                    </text>);         
+           });
+    })
+    .Summary(s => s.TotalItems(items =>
+        {
+            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).DisplayFormat("Tổng: {0} phòng");
+        })
+    )
+    .Editing(e => e
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .Mode(GridEditMode.Popup).UseIcons(true)
+        .Popup(p => p
+            .ID("popup")
+            .ShowTitle(true)
+            .Width(800)
+            .Height(400)
+            .Position(pos => pos
+                .My(HorizontalAlignment.Center, VerticalAlignment.Center)
+                .At(HorizontalAlignment.Center, VerticalAlignment.Center)
+                .Of(new JS("window"))
+            )
+        )
+        .Form(f => f.ID("form").ColCount(2).Items(items => {
+            items.AddSimpleFor(m => m.MaPhong).IsRequired(true);
+            items.AddSimpleFor(m => m.TenPhong).IsRequired(true);
+            items.AddSimpleFor(m => m.LoaiId).IsRequired(true);
+            items.AddSimpleFor(m => m.ToaNhaId).IsRequired(true);
+        })
+    )
+    )
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .Visible(true)
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+        .ShowInfo(true)
+    )
+    .OnRowValidating("validateRow")
+    .OnInitNewRow("setNew")
+    .OnEditingStart("setEdit")
+)
+
+
+
+
+
+<script>
+    function SoThuTu(container, e) {
+        var index = e.component.pageIndex() * e.component.pageSize() + e.rowIndex + 1;
+        container.text(index);
+    }
+
+    function validateRow(e) {
+        var gridInstance = $("#grid").dxDataGrid("instance").getDataSource();
+        var gridData = gridInstance ? gridInstance.items() : []; // Lấy danh sách dữ liệu
+
+        var newMa = e.newData.MaPhong ? e.newData.MaPhong.trim().toLowerCase() : "";
+
+        // Kiểm tra
+        if (newMa && gridData.some(item => item.MaPhong.trim().toLowerCase() === newMa)) {
+            e.isValid = false;
+            e.errorText = "Mã phòng này đã tồn tại. Vui lòng nhập mã khác!";
+        }
+    }
+
+    //Lấy Giá tương ứng
+    function getGiaByLoaiId(rowData) {
+        if (rowData.LoaiId && rowData.Loai && rowData.Loai.Gia) {
+            return rowData.Loai.Gia.GiaTien;
+        }
+        return "Không xác định!";
+    }
+
+    function setNew(e) {
+        if (e.component) {
+            e.component.option("editing.popup.title", "Thêm phòng mới");
+        }
+
+        if (e.data) {          
+            e.data.NgayTao = new Date().toISOString();
+            e.data.TrangThai = false;
+
+        }
+    }
+
+    function setEdit(e){
+        if (e.component) {
+            e.component.option("editing.popup.title", "Chỉnh sửa thông tin phòng");
+        }
+    }
+
+    //Khóa/mở trạng thái phòng
+    function LockStatus(e, id, currentStatus) {
+        let status = !currentStatus;
+
+        DevExpress.ui.dialog.confirm(`Bạn chắc chắn muốn ${status ? "khóa" : "mở khóa"} phòng này không?`, "Xác nhận").then(function (result) {
+            if (result) {
+                let $icon = $(e).find("i"); // lấy icon
+                getLoadPanelInstance().show();
+
+                $.ajax({
+                    type: "POST",
+                    url: 'ThongTinPhong?handler=ToggleStatus',
+                    data: { id: id },
+                    success: function (data) {
+                        getLoadPanelInstance().hide();
+                        if (data.success) {
+                            DevExpress.ui.notify(`Phòng đã được ${data.status ? "khóa" : "mở khóa"} thành công`, "success", 3000);
+
+                            $icon.removeClass("dx-icon-lock dx-icon-unlock").addClass(data.status ? "dx-icon-lock" : "dx-icon-unlock");
+                            $("#grid").dxDataGrid("instance").refresh();
+                        } else {
+                            DevExpress.ui.notify(data.message, "error", 3000);
+                        }
+                    },
+                    error: function () {
+                        getLoadPanelInstance().hide();
+                        DevExpress.ui.notify("Lỗi cập nhật trạng thái", "error", 2000);
+                    }
+
+                }).done(function (data) {
+
+                });
+            }
+        });
+    }
+
+
+
+</script> 

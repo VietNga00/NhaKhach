@@ -1,0 +1,550 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.NhanTraPhongModel
+@using TMS_ModelCore.Models
+
+
+@{
+    ViewData["Title"] = "Nhận - Trả phòng";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+<style>
+    .dx-datagrid-content .dx-datagrid-table .dx-row > td, .dx-datagrid-content .dx-datagrid-table .dx-row > tr > td {
+        white-space: normal !important;
+    }
+
+    .custom-button {
+        border: 1px solid #ccc !important;
+        border-radius: 3px !important;
+        background-color: white !important;
+        color: #333 !important;
+    }
+
+    .custom-button:hover {
+        background-color: #d9d9d9 !important;
+    }
+
+    .custom-button .dx-icon, .custom-button .fas {
+        color: #333 !important;
+    }
+
+    .dx-datagrid .dx-datagrid-content .dx-datagrid-table .dx-row .dx-command-edit-with-icons .dx-link {
+        width: 35px !important;
+        height: 35px !important;
+        padding: 7px !important;
+    }
+</style>
+
+
+@(Html.DevExtreme().LoadPanel()
+    .ID("loadpanel")
+    .Position(p => p.Of("#gridNhanPhong"))
+    .Visible(false)
+    .ShowIndicator(true)
+    .ShowPane(true)
+    .HideOnOutsideClick(false)
+)
+
+
+<h2 class="content-block titlePage">Nhận phòng - Trả phòng</h2>
+
+<div class="row">
+    <div class="col-12">
+        <div class="tabContainer">
+            <div class="card-body" style="padding:0px;">
+                @{
+                    var tab = new[] {
+                        new {Id = 0, text = "Nhận phòng", icon = "fas fa-list", content = "nhanphong"},
+                        new {Id = 1, text = "Trả phòng", icon = "fas fa-list", content = "traphong"},
+                    };
+                }
+
+                @(Html.DevExtreme().Tabs()
+                    .ID("tabs")
+                    .DataSource(tab)
+                    .SelectedIndex(0)
+                    .OnItemClick("TabsItemClick")
+                    )
+
+                <!-- Nhận phòng -->
+                <div id="NhanPhong" style="display: block;">
+                    <br />
+                    @(Html.DevExtreme().DataGrid<GhDatPhong>()
+                        .ID("gridNhanPhong")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/GhDatPhongs").Expand("Phong", "Phong.Loai", "TinhTrang", "NguoiDat")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(s => s.Filter("[ ['TinhTrangId', '=', 1], 'and' ,['TrangThai', '=', false] ]"))
+                        .ShowBorders(true)
+                        .FocusedRowEnabled(true)
+                        .FocusedRowIndex(0)
+                        .Selection(s => s.Mode(SelectionMode.Single))
+                        .FilterRow(f => f.Visible(true))
+                        .ColumnAutoWidth(true)
+                        .AllowColumnResizing(true)
+                        .ColumnHidingEnabled(true)
+                        .Columns(columns =>
+                        {
+                            columns.Add().Type(GridCommandColumnType.Buttons).Width(110)
+                                .Buttons(b =>
+                                {
+                                    b.Add().Hint("Cập nhật thời gian").Icon("far fa-edit").Text("Cập nhật thời gian").CssClass("custom-button").OnClick("EditThoiGianLich");
+                                    b.Add().Hint("Nhận phòng").Icon("fas fa-door-open").Text("Nhận phòng").CssClass("custom-button").OnClick("NhanPhongClick");
+                                });
+                            columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
+                            columns.AddFor(m => m.NguoiDat.FullName).Caption("Người đặt").Name("NguoiDat").MinWidth(130);                         
+                            columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
+                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.AddFor(m => m.AllDay).Caption("Cả ngày").Width(50);                          
+                            columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng");
+                            columns.AddFor(m => m.NgayTao).Visible(false).SortOrder(SortOrder.Asc);
+
+                        })
+                        .Summary(s => s.TotalItems(items =>
+                        {
+                            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("NguoiDat").DisplayFormat("Tổng: {0} lịch");
+                        }))
+                        .MasterDetail(md =>
+                        {
+                            md.Enabled(true);
+                            md.Template(@<text>
+                                <div style="font-weight:bold;"> Lịch <%- data.Id %> - Danh sách khách:</div>
+                                @(Html.DevExtreme().DataGrid<GhDanhSachKhach>()
+                                    .ID(new JS(" 'danhsachkhach'+ data.Id "))
+                                    .DataSource(d => d.OData().Version(4)
+                                        .Url("https://tms.tvu.edu.vn:10220/api/GhDanhSachKhachs")
+                                        .Key("Id").BeforeSend("dvtm")
+                                    )
+                                    .DataSourceOptions(d => {
+                                        d.Filter(" ['Id', '=', data.KhachId] ");
+                                        d.Paginate(true).PageSize(5);
+                                        d.SearchOperation(FilterOperations.Contains);
+                                    })
+                                    .ShowBorders(true)
+                                    .ColumnAutoWidth(true)
+                                    .AllowColumnResizing(true)
+                                    .ColumnHidingEnabled(true)
+                                    .Columns(columns => {
+                                        columns.AddFor(m => m.TenKhach).Caption("Họ tên");
+                                        columns.AddFor(m => m.ChucDanh).Caption("Chức danh");
+                                        columns.AddFor(m => m.SoCccd).Caption("Số căn cước");
+                                        columns.AddFor(m => m.GioiTinh).Caption("Giới tính");                                       
+                                        columns.AddFor(m => m.Sdt).Caption("Sdt");
+                                    })
+                                )
+                            </text>);
+                        })
+                        .Paging(p => p.PageSize(10))
+                        .Pager(p => p
+                            .Visible(true)
+                            .ShowPageSizeSelector(true)
+                            .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+                            .ShowInfo(true)
+                        )
+                        .OnSelectionChanged(@<text>
+                            function(e) {
+                                e.component.collapseAll(-1);
+                                e.component.expandRow(e.currentSelectedRowKeys[0]);
+                            }
+                        </text>)
+                        )
+                </div>
+
+
+                <!-- Trả phòng -->
+                <div id="TraPhong" style="display: none;">
+                    <br />
+                    @(Html.DevExtreme().DataGrid<GhDatPhong>()
+                        .ID("gridTraPhong")
+                        .DataSource(Model.Data, "Id")
+                        .DataSourceOptions(e => e.Filter("[ ['TinhTrangId', '=', 2], 'and' ,['TrangThai', '=', false] ]"))
+                        .ShowBorders(true)
+                        .FocusedRowEnabled(true)
+                        .FocusedRowIndex(0)
+                        .Selection(s => s.Mode(SelectionMode.Single))
+                        .FilterRow(f => f.Visible(true))
+                        .ColumnAutoWidth(true)
+                        .AllowColumnResizing(true)
+                        .ColumnHidingEnabled(true)
+                        .Columns(columns =>
+                        {
+                            columns.Add().Type(GridCommandColumnType.Buttons).Width(60)
+                            .Buttons(b =>
+                            {
+                                b.Add().Hint("Trả phòng").Icon("fas fa-door-closed").Text("Trả phòng").CssClass("custom-button").OnClick("TraPhongClick");
+                            });
+                            columns.Add().Caption("Mã đặt phòng").DataField("Id").Width(60);
+                            columns.Add().Caption("Người đặt").DataField("NguoiDatId").Name("NguoiDat").Lookup(l => l
+                                .DataSource(d => d.OData().Version(4)
+                                    .Url("https://tms.tvu.edu.vn:10220/api/VienChucs")
+                                    .Key("Id").BeforeSend("dvtm")
+                                ).DisplayExpr("FullName").ValueExpr("Id")
+                            ).MinWidth(130);                           
+                            columns.Add().Caption("Phòng").DataField("PhongId").Lookup(l => l
+                                .DataSource(d => d.OData().Version(4)
+                                    .Url("https://tms.tvu.edu.vn:10220/api/GhPhongs")
+                                    .Key("Id").BeforeSend("dvtm")
+                                ).DisplayExpr("MaPhong").ValueExpr("Id")
+                            );
+                            columns.Add().Caption("Từ ngày").DataField("TuNgay").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.Add().Caption("Đến ngày").DataField("DenNgay").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.Add().Caption("Cả ngày").DataField("AllDay").Width(60);
+                            columns.Add().Caption("Tình trạng").DataField("TinhTrangId").Lookup(l => l
+                                .DataSource(d => d.OData().Version(4)
+                                    .Url("https://tms.tvu.edu.vn:10220/api/GhTinhTrangs")
+                                    .Key("Id").BeforeSend("dvtm")
+                                ).DisplayExpr("TenTinhTrang").ValueExpr("Id")
+                            );
+                            columns.Add().Caption("Thời gian nhận").DataField("NgayNhan").Format("dd/MM/yyyy HH:mm:ss").SortOrder(SortOrder.Asc).MinWidth(150);
+                        })
+                        .Summary(s => s.TotalItems(items =>
+                        {
+                            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("NguoiDat").DisplayFormat("Tổng: {0} lịch");
+                        }))
+                        .MasterDetail(md =>
+                        {
+                            md.Enabled(true);
+                            md.Template(@<text>
+                                <div style="font-weight:bold;"> Lịch <%- data.Id %> - Danh sách khách:</div>
+                                @(Html.DevExtreme().DataGrid<GhDanhSachKhach>()
+                                .ID(new JS(" 'danhsachkhach'+ data.Id "))
+                                .DataSource(d => d.OData().Version(4)
+                                    .Url("https://tms.tvu.edu.vn:10220/api/GhDanhSachKhachs")
+                                    .Key("Id").BeforeSend("dvtm")
+                                )
+                                .DataSourceOptions(d => {
+                                    d.Filter(" ['Id', '=', data.KhachId] ");
+                                    d.Paginate(true).PageSize(5);
+                                    d.SearchOperation(FilterOperations.Contains);
+                                })
+                                .ShowBorders(true)
+                                .Columns(columns => {
+                                    columns.AddFor(m => m.TenKhach).Caption("Họ tên");
+                                    columns.AddFor(m => m.ChucDanh).Caption("Chức danh");
+                                    columns.AddFor(m => m.SoCccd).Caption("Số căn cước");
+                                    columns.AddFor(m => m.GioiTinh).Caption("Giới tính");                                    
+                                    columns.AddFor(m => m.Sdt).Caption("Sdt");
+                                })
+                                )
+                            </text>);
+                        })
+                        .Paging(p => p.PageSize(20))
+                        .Pager(p => p
+                            .Visible(true)
+                            .ShowPageSizeSelector(true)
+                            .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+                            .ShowInfo(true)
+                        )
+                        .OnSelectionChanged(@<text>
+                            function(e) {
+                                e.component.collapseAll(-1);
+                                e.component.expandRow(e.currentSelectedRowKeys[0]);
+                            }
+                        </text>)
+                     )
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Show edit lịch -->
+@(Html.DevExtreme().Popup()
+    .ID("popupedit")
+    .Title("Cập nhật thông tin lịch đặt")
+    .Width(800)
+    //.Height("Auto")
+    .ShowCloseButton(true)
+    .Visible(false)
+    .ContentTemplate(@<text>
+    <form method="post">
+        <div class="row">
+            <div class="dx-field col-6">
+                <div class="dx-field-label"><b>Mã lịch:</b></div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox()
+                    .ID("malich")
+                    .Value("")
+                    .ReadOnly(true)
+                    )
+                </div>
+            </div>
+            <div class="dx-field col-6">
+                <div class="dx-field-label"><b>Phòng:</b></div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox()
+                    .ID("phong")
+                    .Value("")
+                    .ReadOnly(true)
+                    )
+                </div>
+            </div>
+        </div>       
+        <div class="row">
+            <div class="dx-field col-6">
+                <div class="dx-field-label"><b>Người đặt:</b></div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox()
+                    .ID("nguoidat")
+                    .Value("")
+                    .ReadOnly(true)
+                    )
+                </div>
+            </div>
+            <div class="dx-field col-6">
+                <div class="dx-field-label"><b>Khách ở:</b></div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox()
+                    .ID("khach")
+                    .Value("")
+                    .ReadOnly(true)
+                    )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="dx-field col-6">
+                <div class="dx-field-label"><b>Từ ngày:</b></div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DateBox()
+                    .ID("tungay")
+                    .Value("")
+                    .Type(DateBoxType.DateTime)
+                    .DisplayFormat("HH:mm:ss dd/MM/yyyy")
+                    //.OnValueChanged("ChangedTime")
+                    )
+                </div>
+            </div>
+            <div class="dx-field col-6">
+                <div class="dx-field-label"><b>Đến ngày:</b></div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DateBox()
+                    .ID("denngay")
+                    .Value("")                
+                    .Type(DateBoxType.DateTime)
+                    .DisplayFormat("HH:mm:ss dd/MM/yyyy")
+                    )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="dx-field col-6">
+                <div class="dx-field-label"><b>Cả ngày:</b></div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().CheckBox()
+                    .ID("cangay")                   
+                    .ElementAttr(new {style = "float: left" })                    
+                    )
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12" style="text-align: right;padding-top:30px">
+                <button type="button" class="btn btn-success" onclick="SaveLich()">Lưu thay đổi</button>
+            </div>
+        </div>
+
+    </form>
+    </text>)
+)
+
+<script>
+    function getLoadPanelInstance() {
+        return $("#loadpanel").dxLoadPanel("instance");
+    }
+
+    //Chuyển tab
+    function TabsItemClick(e) {
+        var NhanPhong = document.getElementById("NhanPhong");
+        var TraPhong = document.getElementById("TraPhong");
+
+        if (e.itemData.Id == 0) {
+            NhanPhong.style.display = "block";
+            TraPhong.style.display = "none";
+
+            var grid1 = $("#gridNhanPhong").dxDataGrid("instance");
+            if (grid1) grid1.repaint();
+        }
+
+        if (e.itemData.Id == 1) {
+            NhanPhong.style.display = "none";
+            TraPhong.style.display = "block";
+
+            var grid2 = $("#gridTraPhong").dxDataGrid("instance");
+            if (grid2) grid2.repaint();
+        }
+    }
+
+    /* Nhận phòng */
+
+    function NhanPhongClick(e) {
+        DevExpress.ui.dialog.confirm("Bạn có chắc muốn nhận phòng", "Xác nhận").then(function (result) {
+            if (result) {              
+                $.ajax({
+                    type: "POST",
+                    url: 'NhanTraPhong?handler=NhanLich',
+                    data: { lichId: e.row.data.Id },
+                    beforeSend: function (xhr) {
+                        xhr.setRequestHeader("XSRF-TOKEN", $('input:hidden[name="__RequestVerificationToken"]').val());
+                    },
+                    error: function (xhr, status, error) { },
+                    success: function (data) {
+
+                        location.reload();
+                        DevExpress.ui.notify("Nhận phòng thành công", "success", 3000);
+
+                    }
+                }).done(function (data) {
+
+                });
+            }
+        });
+    }
+
+    // Format thời gian
+    function formatLocalDatetime(date) {
+        const pad = n => n.toString().padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    }
+
+    //Edit lịch
+    function EditThoiGianLich(e) {
+        var idlich = e.row.data.Id;
+        getLoadPanelInstance().show();
+
+        $.ajax({
+            type: "GET",
+            url: 'NhanTraPhong?handler=ShowLich',
+            data: { idlich: idlich },
+            success: function (data) {
+               getLoadPanelInstance().hide();
+        
+                $("#popupedit").dxPopup("instance").show();
+                $("#malich").dxTextBox("instance").option("value", data.Id);
+                $("#phong").dxTextBox("instance").option("value", data.MaPhong);             
+                $("#tungay").dxDateBox("instance").option("value", data.TuNgay);
+                $("#denngay").dxDateBox("instance").option("value", data.DenNgay);
+                $("#cangay").dxCheckBox("instance").option("value", data.AllDay);
+                $("#nguoidat").dxTextBox("instance").option("value", data.TenNguoiDat);
+                $("#khach").dxTextBox("instance").option("value", data.TenKhach);
+            },
+            error: function () {
+                DevExpress.ui.notify("Có lỗi xảy ra khi tải dữ liệu lịch đặt.", "error", 2000);
+            }
+        });
+    }
+
+    $(function () {
+        $("#popupedit").dxPopup("instance").option("onShown", function () {
+            const cangay = $("#cangay").dxCheckBox("instance");
+            const tu = $("#tungay").dxDateBox("instance");
+            const den = $("#denngay").dxDateBox("instance");
+
+            if (!cangay || !tu || !den) return;
+
+            cangay.option("onValueChanged", function (e) {               
+                const start = new Date(tu.option("value"));
+                const end = new Date(den.option("value"));
+
+                if (e.value === true) {
+                    start.setHours(0, 0, 0);
+                    end.setHours(23, 59, 59);
+
+                    tu.option("value", start);
+                    den.option("value", end);
+
+                    tu.option("readOnly", true);
+                    den.option("readOnly", true);                 
+                } else {
+                    start.setHours(8, 0, 0);
+                    end.setHours(17, 0, 0);
+
+                    tu.option("value", start);   
+                    den.option("value", end);
+
+                    tu.option("readOnly", false);
+                    den.option("readOnly", false);                    
+                }
+
+            });
+        });
+    });
+  
+
+    function SaveLich() {
+        var idlich = $("#malich").dxTextBox("instance").option("value");
+        var tungay = formatLocalDatetime($("#tungay").dxDateBox("instance").option("value"));
+        var denngay = formatLocalDatetime($("#denngay").dxDateBox("instance").option("value"));
+        var isAllDay = $("#cangay").dxCheckBox("instance").option("value");
+       
+        if (!tungay || !denngay) {
+            DevExpress.ui.notify("Vui lòng chọn đầy đủ thời gian!", "error", 3000);
+            return;
+        }
+
+        if (tungay >= denngay) {
+            DevExpress.ui.notify("Thời gian kết thúc phải sau thời gian bắt đầu", "error", 3000);
+            return;
+        }      
+
+        $.ajax({
+            type: "POST",
+            url: 'NhanTraPhong?handler=UpdateLich',
+            data: {
+                idlich: idlich, 
+                tungay: tungay, 
+                denngay: denngay, 
+                cangay: isAllDay 
+            },
+            success: function (response) {
+                if (response.success) {
+                    $("#popupedit").dxPopup("instance").hide();
+                    DevExpress.ui.notify("Cập nhật thời gian thành công", "success", 2000);
+                    location.reload();
+                } else {
+                    DevExpress.ui.notify(response.message, "error", 3000);
+                }
+            },
+            error: function () {
+                DevExpress.ui.notify("Có lỗi xảy ra khi cập nhật thời gian", "error", 3000);
+            }
+        });
+    };    
+
+
+    /* Trả phòng */
+   function TraPhongClick(e){
+       console.log("id ", e.row.data.Id);
+       DevExpress.ui.dialog.confirm("Bạn có chắc chắn muốn trả phòng này?", "Xác nhận").then(function (result){
+           if(result){
+               $.ajax({
+                  type: "POST" ,
+                  url: 'NhanTraPhong?handler=TraPhong',
+                  data: {lichId: e.row.data.Id},
+                  beforeSend: function (xhr) {
+                        xhr.setRequestHeader("XSRF-TOKEN", $('input:hidden[name="__RequestVerificationToken"]').val());
+                  },
+                  success: function(data){
+                      if(data.success){
+                          DevExpress.ui.notify("Trả phòng thành công", "success", 3000);
+                          location.reload();
+                      }else{
+                          DevExpress.ui.notify(data.message, "error", 3000);
+                      }
+                  },
+                  error: function(xhr, status, error){
+                      DevExpress.ui.notify("Có lỗi xảy ra khi trả phòng", "error", 3000);
+                  }
+               });
+           }
+       });
+   }
+
+   
+
+</script>

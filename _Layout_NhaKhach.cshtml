@@ -1,0 +1,302 @@
+﻿<!DOCTYPE html>
+
+@using TMSWeb_Core.Models;
+@using Microsoft.AspNetCore.Http
+@using Simple.OData.Client
+@using TMS_ModelCore.Models
+
+
+@{
+    var accesToken = Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.GetTokenAsync(Context, "access_token");
+    string email = User.FindFirst("Email").Value;
+    var client = new ODataClient(common.SetODataToken(accesToken.Result));
+    var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
+    VienChuc VienChuc = await client.For<VienChuc>().Filter(f => f.Id == taikhoan.VienChucId).FindEntryAsync();
+
+    string hinhanh = VienChuc.HinhAnh == null || VienChuc.HinhAnh == "" ? @"\vienchuc_imgs\1\1\img_avatar_female.png" : VienChuc.HinhAnh;
+    if ((VienChuc.HinhAnh == null || VienChuc.HinhAnh == "") && VienChuc.GioiTinh == "Nam")
+        hinhanh = @"\vienchuc_imgs\1\1\img_avatar_male.png";
+
+
+    //lấy danh sách các menu user có quyền truy cập
+    List<string> listAction = await common.getActionAllowAsync(email, accesToken.Result);
+}
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>@ViewData["Title"] - Nhà Khách TVU</title>
+
+    @*<link rel="stylesheet" href="../lib/bootstrap/dist/css/bootstrap.css" />*@
+    @*<link rel='stylesheet' href='../lib/bootstrap/dist/css/bootstrap.min.css' />*@
+    <link rel="stylesheet" href="../../css/thirdparty.bundle.css" />
+    @*<link rel="stylesheet" href="../css/site.css" />*@
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <link rel="stylesheet" href="~/RoyalUI/vendors/ti-icons/css/themify-icons.css">
+    <link rel="stylesheet" href="~/RoyalUI/vendors/base/vendor.bundle.base.css">
+    <link rel="stylesheet" href="~/RoyalUI/css/style.css">
+    <link href="~/css/scrollbar.css" rel="stylesheet" />
+
+    <script src="~/RoyalUI/vendors/base/vendor.bundle.base.js"></script>
+    <script src="~/RoyalUI/vendors/chart.js/Chart.min.js"></script>
+    <script src="~/RoyalUI/js/off-canvas.js"></script>
+    <script src="~/RoyalUI/js/hoverable-collapse.js"></script>
+    <script src="~/RoyalUI/js/template.js"></script>
+    <script src="~/RoyalUI/js/todolist.js"></script>
+    <script src="~/RoyalUI/Index"></script>
+    <script src="~/RoyalUI/js/dashboard.js"></script>
+
+
+    <link href="../logo.ico" rel="shortcut icon" type="image/x-icon" />
+    <script src="../js/thirdparty.bundle.js"></script>
+    <script src="../js/site.js" asp-append-version="true"></script>
+
+    @*export dxdatagrid*@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/7.4.0/polyfill.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.1.1/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.2/FileSaver.min.js"></script>
+
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+    <style>
+        @@media only screen and (max-width: 400px) {
+            .hideWhenSmallScreen {
+                display: none;
+            }
+        }
+
+        .floatoneline {
+            float: left;
+            padding-left: 10px;
+            display: inline-flex;
+            vertical-align: central;
+        }
+
+        .badge {
+            display: inline-block;
+            min-width: 6px; /* pixel unit */
+            padding: 3px 4px; /* pixel unit */
+            border-radius: 50%;
+            font-size: 9px;
+            text-align: center;
+            background: #1779ba;
+            color: #fefefe;
+        }
+
+        .titlePage {
+            margin: 0.1em 0 0.5em 0;
+            font-weight: 600;
+            font-family: 'Titillium Web', sans-serif;
+            position: relative;
+            font-size: 20px !important;
+            line-height: 35px;
+            padding: 5px 5px 5px 5px;
+            color: #355681;
+            box-shadow: inset 0 0 0 1px rgba(53,86,129, 0.4), inset 0 0 5px rgba(53,86,129, 0.5), inset -285px 0 35px white;
+            border-radius: 0 5px 0 5px;
+            text-align: center;
+        }
+
+        .pageHolder {
+            overflow: auto;
+            width: 100%;
+            padding-bottom: 5px;
+        }
+
+        .dx-datagrid .dx-header-row .dx-datagrid-text-content {
+            white-space: normal !important;
+        }
+
+       
+    </style>
+
+
+</head>
+<body>
+    <div class="container-scroller">
+        <!-- partial:partials/_navbar.html -->
+        <nav class="navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
+            <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+                <a class="navbar-brand brand-logo mr-5" href="/" style="margin:0 !important; padding:10px !important;"><img src="~/img/logo.png" style="width: 400px; height: 43px;" class="mr-2" alt="logo" /></a>
+                <a class="navbar-brand brand-logo-mini" href="/"><img style="height: 40px;" src="~/img/TVU.png" alt="logo" /></a>
+            </div>
+
+
+            <div class="navbar-menu-wrapper d-flex align-items-center justify-content-end">
+                <button class="navbar-toggler navbar-toggler align-self-center" type="button" data-toggle="minimize">
+                    <span class="ti-view-list"></span>
+                </button>
+                <ul class="navbar-nav navbar-nav-right">
+                     @if (User.Identity.IsAuthenticated)
+                     {
+                        <li class="nav-item nav-profile dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" id="profileDropdown">
+                                <div class="col-10 hideWhenSmallScreen" style="padding:0; margin:0; text-align:right; color:green; float:left; padding-right:5px;">
+                                    <div>
+                                        <b>
+                                            @VienChuc.Ho @if (VienChuc.TenDem != null)
+                                            {
+                                                @VienChuc.TenDem
+                                            } @VienChuc.Ten
+                                        </b>
+                                    </div><div style="margin-top: -10px;">(@email)</div>
+                                </div>
+                                <img src="https://tms.tvu.edu.vn:10220/@hinhanh" />
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="profileDropdown">
+                                <a class="dropdown-item" href="~/System/SignOut">
+                                    <i class="ti-power-off text-primary"></i>
+                                    Thoát
+                                </a>
+                            </div>
+                        </li>
+                     }
+                </ul>
+                <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button" data-toggle="offcanvas">
+                    <span class="ti-view-list"></span>
+                </button>
+            </div>
+
+
+        </nav>
+        <!-- partial -->
+        <div class="container-fluid page-body-wrapper">
+            <!-- partial:partials/_sidebar.html -->
+            <nav class="sidebar sidebar-offcanvas" id="sidebar" style="background-color: white;">
+
+                @if ((email == "nvvnga1103@gmail.com"))  // nhukhanhtv052@gmail.com / nvvnga1103@gmail.com
+                //Nếu thay đổi email -> cập nhật dsAdmin trong LichDatPhong - TaoDeNghi
+                {
+                    <ul class="nav">
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="collapse" href="#hethong" aria-expanded="false" aria-controls="hethong">
+                                <i class="fas fa-hotel menu-icon"></i>
+                                <span class="menu-title">Quản lý nhà khách</span>  <i class="menu-arrow"></i>
+                            </a>
+                            <div class="collapse" id="hethong">
+                                <ul class="nav flex-column sub-menu">
+                                    <li class="nav-item"> <a class="nav-link" href="/NhaKhach/LoaiPhong">Loại phòng</a></li>
+                                    <li class="nav-item"> <a class="nav-link" href="/NhaKhach/ThongTinPhong">Phòng</a></li>
+                                    <li class="nav-item"> <a class="nav-link" href="/NhaKhach/TinhTrang">Tình trạng</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="collapse" href="#denghi" aria-expanded="false" aria-controls="denghi">
+                                <i class="fas fa-paste menu-icon"></i>
+                                <span class="menu-title">Quản lý đề nghị</span> <i class="menu-arrow"></i>
+                            </a>
+                            <div class="collapse" id="denghi">
+                                <ul class="nav flex-column sub-menu">
+                                    <li class="nav-item"> <a class="nav-link" href="/NhaKhach/TaoDeNghi">Tạo đề nghị</a></li>
+                                    <li class="nav-item"> <a class="nav-link" href="/NhaKhach/DanhSachDeNghi">Danh sách đề nghị</a></li>
+                                    <li class="nav-item"> <a class="nav-link" href="/NhaKhach/DanhSachKhach">Danh sách khách ở</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/LichDatPhong">
+                                <i class="fas fa-calendar-alt menu-icon"></i>
+                                <span class="menu-title">Lịch đặt phòng</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/DanhSachLich">
+                                <i class="fas fa-clipboard-list menu-icon"></i>
+                                <span class="menu-title">Lịch đặt - Phê duyệt</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/NhanTraPhong">
+                                <i class="fas fa-clipboard-check menu-icon"></i>
+                                <span class="menu-title">Nhận - Trả phòng</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="collapse" href="#ThongKe" aria-expanded="false" aria-controls="ThongKe">
+                                <i class="fas fa-chart-line menu-icon"></i>
+                                <span class="menu-title">Báo cáo thống kê</span> <i class="menu-arrow"></i>
+                            </a>
+                            <div class="collapse" id="ThongKe">
+                                <ul class="nav flex-column sub-menu">
+                                    <li class="nav-item"> <a class="nav-link" href="/NhaKhach/ThongKe">Hệ thống</a></li>
+                                    <li class="nav-item"> <a class="nav-link" href="/NhaKhach/ThongKePhong">Phòng</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/HuongDanQuanLyNhaKhach">
+                                <span class="menu-title">Hướng dẫn sử dụng</span>
+                            </a>
+                        </li>
+                    </ul>
+               } else {
+                    <ul class="nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/ThongTinNhaKhach">
+                                <i class="fas fa-hotel menu-icon"></i>
+                                <span class="menu-title">Thông tin phòng</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/TaoDeNghi">
+                                <i class="fas fa-file-medical menu-icon"></i>
+                                <span class="menu-title">Tạo đề nghị</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/TaoDatPhong">
+                                <i class="far fa-calendar-plus menu-icon"></i>
+                                <span class="menu-title">Tạo đặt phòng</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/LichDatPhong">
+                                <i class="fas fa-calendar-alt menu-icon"></i>
+                                <span class="menu-title">Lịch đặt phòng</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/DanhSach">
+                                <i class="fas fa-clipboard-list menu-icon"></i>
+                                <span class="menu-title">DS đề nghị & lịch đặt</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/NhaKhach/HuongDanNhaKhach">
+                                <span class="menu-title">Hướng dẫn sử dụng</span>
+                            </a>
+                        </li>
+                    </ul>
+               }
+            </nav>
+            <!-- partial -->
+            <div class="main-panel">
+                <div class="content-wrapper" style="background-color: white;">
+
+                    <div>
+                        @RenderBody()
+                    </div>
+
+
+                </div>
+                <!-- content-wrapper ends -->
+                <!-- partial:partials/_footer.html -->
+                <footer class="footer" style="background-color: white;">
+                    <div class="d-sm-flex justify-content-center justify-content-sm-between">
+                        <span class="text-muted d-block text-center text-sm-left d-sm-inline-block">Copyright © 2021</span>
+                        <span class="float-none float-sm-right d-block mt-1 mt-sm-0 text-center"> <i class="ti-home menu-icon"></i> Trường Đại Học Trà Vinh</span>
+                    </div>
+                </footer>
+                <!-- partial -->
+            </div>
+            <!-- main-panel ends -->
+        </div>
+        <!-- page-body-wrapper ends -->
+    </div>
+</body>
+</html>

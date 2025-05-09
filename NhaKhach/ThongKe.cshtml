@@ -1,0 +1,138 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.ThongKeModel
+@using TMS_ModelCore.Models
+
+@{
+    ViewData["Title"] = "Thống kê";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+@{
+    var fullData = Enumerable.Range(1, 12).Select(thang => new GhThongKe
+            {
+                Thang = thang,
+                TongLichDat = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongLichDat ?? 0,
+                TongLichHuy = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongLichHuy ?? 0,
+                TongLichQuaHan = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongLichQuaHan ?? 0,
+                TongSoKhach = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongSoKhach ?? 0,
+            }).ToList();
+}
+
+
+<h2 class="content-block titlePage">Thống kê hệ thống nhà khách TVU</h2>
+
+
+
+<form method="post" style="margin-bottom: 20px">
+    <label for=" NamThongKe">Chọn năm: </label>
+    <select id="NămThongKe" name="namchon" asp-for="namchon" asp-items="new SelectList(Model.DanhSachNam) ">
+        <option value="">Chọn năm</option>
+    </select>
+    <button type="submit" class="btn btn-primary" style="margin-left: 20px;">Xem thống kê</button>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+<!-- Biểu đồ -->
+<div>
+    @(Html.DevExtreme().Chart()
+    .ID("chart")    
+    .DataSource(fullData)
+    .Title(t => t.Text($"Thống kê hệ thống theo tháng của năm ({Model.namchon})"))
+    .CommonSeriesSettings(s => s.ArgumentField("Thang"))
+    .Margin(m => m.Bottom(20))
+    .ValueAxis(a =>
+    {     
+        a.Add().Name("LichDatAxis").Position(Position.Left)
+            .Label(l => l.CustomizeText(@<text> 
+                function (info) { 
+                    return info.value ; 
+                } 
+            </text>));
+    })
+    .ArgumentAxis(a => a
+        .ValueMarginsEnabled(true)       
+        .DiscreteAxisDivisionMode(DiscreteAxisDivisionMode.BetweenLabels)
+        .Type(AxisScaleType.Discrete)
+        .Grid(g => g.Visible(true))  
+        .Label(l => l.CustomizeText(@<text>
+            function (info) {
+                return "Tháng " + info.value;
+            }
+        </text>))
+    )      
+    .Series(series => {
+       
+        series.Add().ValueField("TongLichDat").Name("Lịch đặt").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b30000");
+        series.Add().ValueField("TongLichHuy").Name("Lịch hủy").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#808080");
+        series.Add().ValueField("TongLichQuaHan").Name("Lịch quá hạn").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b8b894");
+        series.Add().ValueField("TongSoKhach").Name("Khách").Type(SeriesType.Spline).Axis("LichDatAxis").Color("#ffa500");   
+      
+    })
+    .Legend(l => l
+        .VerticalAlignment(VerticalEdge.Top)
+        .HorizontalAlignment(HorizontalAlignment.Center)
+        .ItemTextPosition(Position.Bottom)
+    )   
+    .Export(e => e.Enabled(true))
+    .Tooltip(t => t.Enabled(true)
+        .CustomizeTooltip(@<text>
+            function (info) {
+                var value = info.value;
+                var seriesName = info.seriesName;
+                if (seriesName === "Lịch đặt" || seriesName === "Lịch hủy" || seriesName === "Lịch quá hạn") {
+                    return { text: seriesName + ": " + value.toLocaleString('vi-VN') + " lịch" };               
+                } else if(seriesName === "Khách") {
+                    return { text: seriesName + ": " + value.toLocaleString('vi-VN') + " khách" };
+                }
+                return { text: seriesName + ": " + value };
+            }
+        </text>)
+    )
+)
+</div>
+
+
+<!-- Datagrid -->
+<div style="margin-top: 50px;">
+ <p style="font-weight:bold; font-size:25px;text-align:center">Thống kê hệ thống chi tiết từng tháng</p>
+    @(Html.DevExtreme().DataGrid<GhThongKe>()
+        .ID("gridThongKe")       
+        .ShowBorders(true)
+       // .DataSource(Model.ThongKe)
+        .DataSource(d => d.OData().Version(4)
+            .Url("https://tms.tvu.edu.vn:10220/api/GhThongKes")
+            .Key("Id").BeforeSend("dvtm")
+        )
+        .Columns(columns =>
+        {
+            columns.AddFor(m => m.Nam).Caption("Năm").GroupIndex(0);
+            columns.AddFor(m => m.Thang).Caption("Tháng");           
+            columns.AddFor(m => m.TongLichDat).Caption("Tổng lịch đặt");
+            columns.AddFor(m => m.TongLichHuy).Caption("Tổng lịch hủy");
+            columns.AddFor(m => m.TongLichQuaHan).Caption("Tổng lịch quá hạn");
+            columns.AddFor(m => m.TongSoKhach).Caption("Tổng số khách");
+        })
+         .Summary(s => s
+            .TotalItems(items =>
+            {
+                items.AddFor(m => m.TongLichDat).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.TongLichHuy).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.TongLichQuaHan).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.TongSoKhach).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} khách");
+            })
+        )
+        .FilterRow(filterRow => filterRow.Visible(true))
+        .HeaderFilter(headerFilter => headerFilter.Visible(true))
+        .Paging(p => p.PageSize(20))
+        .Pager(p => p
+            .Visible(true)
+            .ShowPageSizeSelector(true)
+            .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+            .ShowInfo(true)
+        )
+        .SearchPanel(searchPanel => searchPanel.Visible(true))
+        )
+</div>

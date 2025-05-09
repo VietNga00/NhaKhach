@@ -1,0 +1,75 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.ThongTinNhaKhachModel
+@using TMS_ModelCore.Models
+
+
+@{
+    ViewData["Title"] = "Thông tin phòng";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+
+
+<h2 class="content-block titlePage">Thông tin phòng</h2>
+
+@(Html.DevExtreme().DataGrid<GhPhong>()
+    .ID("grid")
+    .DataSource(d => d.OData().Version(4)
+        .Url("https://tms.tvu.edu.vn:10220/api/GhPhongs").Expand("Loai", "ToaNha")
+        .Key("Id").BeforeSend("dvtm")
+    )
+    .DataSourceOptions(s => s.Filter(" [ ['TrangThai', '=', false], 'and', ['Loai.TrangThai', '=', false] ] "))
+    .ShowBorders(true)   
+    .FilterRow(f => f.Visible(true))
+    .FocusedRowEnabled(true)
+    .FocusedRowIndex(0)   
+    .SearchPanel(s => s
+        .Visible(true)
+        .Width("Auto")
+        .Placeholder("Nhập từ khóa tìm kiếm...")
+    )
+    .ColumnAutoWidth(true)
+    .AllowColumnResizing(true)
+    .ColumnHidingEnabled(true)
+    .Columns(columns => 
+    {
+        columns.Add().Caption(" ").CellTemplate(new JS("SoThuTu"));
+        columns.AddFor(m => m.MaPhong).Caption("Phòng");
+        columns.AddFor(m => m.ToaNha.TenToaNha).Caption("Tòa nhà");
+        columns.AddFor(m => m.Loai.TenLoai).Caption("Loại phòng");             
+        columns.AddFor(m => m.TrangThai).Caption("Trạng thái").Lookup(l => l
+            .DataSource(new[] {
+                new { Id = false, Name = "Đang hoạt động" },
+                new { Id = true, Name = "Tạm khóa" }
+            }).DisplayExpr("Name").ValueExpr("Id")
+        ).CellTemplate(@<text>
+            <span style="color: <%-value === false ? 'green' : 'gray' %> ">
+                <%- value === false ? 'Đang hoạt động' : 'Tạm khóa' %>
+            </span>
+        </text>);
+        
+    })
+    .Summary(s => s.TotalItems(items =>
+        {
+            items.AddFor(m => m.MaPhong).SummaryType(SummaryType.Count).DisplayFormat("Tổng: {0} phòng");
+        })
+    )
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .Visible(true)
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+        .ShowInfo(true)
+    )
+
+
+)
+
+
+
+<script>
+    function SoThuTu(container, e) {
+        var index = e.component.pageIndex() * e.component.pageSize() + e.rowIndex + 1;
+        container.text(index);
+    }
+</script>

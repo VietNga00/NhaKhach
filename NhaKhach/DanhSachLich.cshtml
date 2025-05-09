@@ -1,0 +1,417 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.DanhSachLichModel
+@using TMS_ModelCore.Models
+
+
+@{
+    ViewData["Title"] = "Lịch đặt - Phê duyệt";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+
+
+<style>
+    .dx-datagrid-content .dx-datagrid-table .dx-row > td, .dx-datagrid-content .dx-datagrid-table .dx-row > tr > td {
+        white-space: normal !important;
+    }
+
+    .custom-button{
+        border: 1px solid #ccc !important;
+        border-radius: 3px !important;
+        background-color: white !important;
+        color: #333 !important;
+    }
+
+    .custom-button:hover{
+        background-color: #d9d9d9 !important;       
+    }
+
+    .custom-button .dx-icon, .custom-button .fas{
+        color: #333 !important;
+    }
+
+    .dx-datagrid .dx-datagrid-content .dx-datagrid-table .dx-row .dx-command-edit-with-icons .dx-link {
+        width: 35px !important;
+        height: 35px !important;
+        padding: 7px !important;
+    }
+
+
+</style>
+
+<h2 class="content-block titlePage">Lịch đặt - Phê duyệt</h2>
+
+<div class="row">
+    <div class="col-12">
+        <div class="tabContainer">
+            <div class="card-body" style="padding:0px;">
+                @{
+                    var tab = new[] {
+                    new {Id = 0, text = "Danh sách chờ duyệt", icon = "fas fa-list", content = "lichchoduyet"},
+                    new {Id = 1, text = "Danh sách lịch đặt", icon = "fas fa-list", content = "danhsachlich"},
+                    };
+                }
+
+                @(Html.DevExtreme().Tabs()
+                    .ID("tabs")
+                    .DataSource(tab)
+                    .SelectedIndex(0)
+                    .OnItemClick("TabsItemClick")
+                    )
+
+                <!-- Lịch chờ duyệt -->
+               <div id="LichChoDuyet" style="display: block;">
+                    <br />
+                    @(Html.DevExtreme().DataGrid<GhDatPhong>()
+                        .ID("gridLichChoDuyet")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/GhDatPhongs").Expand("Phong", "Phong.Loai", "TinhTrang", "NguoiDat")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(s => s.Filter(new JS("['TinhTrangId', '=', 5]")))
+                        .ShowBorders(true)
+                        .FocusedRowEnabled(true)
+                        .FocusedRowIndex(0)            
+                        .Selection(s => s.Mode(SelectionMode.Single))
+                        .FilterRow(f => f.Visible(true))
+                        .ColumnAutoWidth(true)
+                        .AllowColumnResizing(true)
+                        .ColumnHidingEnabled(true)                      
+                        .Columns(columns =>
+                        {
+                             columns.Add().Type(GridCommandColumnType.Buttons) .Width(75)
+                                .Buttons(b =>
+                                {                                   
+                                    b.Add().Hint("Duyệt lịch").Icon("fas fa-calendar-check").Text("Duyệt lịch").CssClass("custom-button").OnClick("DuyetLich");
+                                });
+                            columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
+                            columns.AddFor(m => m.DeNghiId).Caption("Mã đề nghị").Width(60);
+                            columns.AddFor(m => m.NguoiDat.FullName).Caption("Người đặt").Name("NguoiDat").MinWidth(130);
+                            columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
+                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.AddFor(m => m.AllDay).Caption("Cả ngày").Width(60);                           
+                            columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng");
+                            columns.AddFor(m => m.NgayTao).Visible(false).SortOrder(SortOrder.Asc);
+
+                        })
+                        .Summary(s => s.TotalItems(items =>
+                        {
+                            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("NguoiDat").DisplayFormat("Tổng: {0} lịch");
+                        }))
+                        .MasterDetail(md =>
+                        {
+                            md.Enabled(true);
+                            md.Template(@<text>
+                                <div style="font-weight:bold;"> Lịch <%- data.Id %> - Danh sách khách:</div>
+                                @(Html.DevExtreme().DataGrid<GhDanhSachKhach>()
+                                    .ID(new JS(" 'danhsachkhach_'+ data.Id "))
+                                    .DataSource(d => d.OData().Version(4)
+                                        .Url("https://tms.tvu.edu.vn:10220/api/GhDanhSachKhachs")
+                                        .Key("Id").BeforeSend("dvtm")
+                                    )
+                                    .DataSourceOptions(d => {
+                                        d.Filter(" ['Id', '=', data.KhachId] ");
+                                        d.Paginate(true).PageSize(5);
+                                        d.SearchOperation(FilterOperations.Contains);
+                                    })        
+                                    .ShowBorders(true)
+                                    .ColumnAutoWidth(true)
+                                    .AllowColumnResizing(true)
+                                    .ColumnHidingEnabled(true)
+                                    .Columns(columns => {
+                                        columns.AddFor(m => m.TenKhach).Caption("Họ tên");
+                                        columns.AddFor(m => m.ChucDanh).Caption("Chức danh");
+                                        columns.AddFor(m => m.SoCccd).Caption("Số căn cước");
+                                        columns.AddFor(m => m.GioiTinh).Caption("Giới tính");                                        
+                                        columns.AddFor(m => m.Sdt).Caption("Sdt");
+
+                                    })
+                                )
+                            </text>);
+                        })
+                        .Paging(p => p.PageSize(10))
+                        .Pager(p => p
+                            .Visible(true)
+                            .ShowPageSizeSelector(true)
+                            .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+                            .ShowInfo(true)
+                        )
+                        .OnSelectionChanged(@<text>
+                            function(e) {
+                                e.component.collapseAll(-1);
+                                e.component.expandRow(e.currentSelectedRowKeys[0]);
+                            }
+                        </text>)
+                     )
+                </div> 
+
+
+                <!-- Danh sách lịch -->
+                <div id="DanhSachLich" style="display: none;">
+                    <br />
+                    @(Html.DevExtreme().DataGrid<GhDatPhong>()
+                        .ID("gridDanhSachLich")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/GhDatPhongs").Expand("Phong", "Phong.Loai", "TinhTrang", "NguoiDat", "Khach")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .ShowBorders(true)
+                        .FocusedRowEnabled(true)
+                        .FocusedRowIndex(0)
+                        .Selection(s => s.Mode(SelectionMode.Single))
+                        .FilterRow(f => f.Visible(true))
+                        .ColumnAutoWidth(true)
+                        .AllowColumnResizing(true)
+                        .ColumnHidingEnabled(true)
+                        .Columns(columns =>
+                        {                         
+                            columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
+                            columns.AddFor(m => m.DeNghiId).Caption("Mã đề nghị").Width(60);
+                            columns.AddFor(m => m.NguoiDat.FullName).Caption("Người đặt").Name("NguoiDat").MinWidth(130);
+                            columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
+                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.AddFor(m => m.AllDay).Caption("Cả ngày").Width(50);
+                            columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng lịch");
+                            columns.AddFor(m => m.TrangThai).Caption("Trạng thái lịch").Width(75).Lookup(lookup => lookup
+                                .DataSource(new[] {
+                                    new { Id = false, Name = "" },
+                                    new { Id = true, Name = "Quá hạn" }
+                                }).ValueExpr("Id").DisplayExpr("Name")
+                            );
+                            columns.AddFor(m => m.GhiChu).Caption("Ghi chú").Width(130);
+                            columns.AddFor(m => m.NgayTao).Visible(false).SortOrder(SortOrder.Desc);
+                        })
+                        .Summary(s => s.TotalItems(items =>
+                        {
+                            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("NguoiDat").DisplayFormat("Tổng: {0} lịch");
+                        })
+                        )
+                        .MasterDetail(md =>
+                        {
+                            md.Enabled(true);
+                            md.Template(@<text>
+                                <div style="font-weight:bold;"> Lịch <%- data.Id %> - Danh sách khách:</div>
+                                @(Html.DevExtreme().DataGrid<GhDanhSachKhach>()
+                                    .ID(new JS(" 'dskhach_'+ data.Id "))
+                                    .DataSource(d => d.OData().Version(4)
+                                        .Url("https://tms.tvu.edu.vn:10220/api/GhDanhSachKhachs")
+                                        .Key("Id").BeforeSend("dvtm")
+                                    )
+                                    .DataSourceOptions(d => {
+                                        d.Filter(" ['Id', '=', data.KhachId] ");
+                                        d.Paginate(true).PageSize(5);
+                                        d.SearchOperation(FilterOperations.Contains);
+                                    })       
+                                    .ShowBorders(true)
+                                    .ColumnAutoWidth(true)
+                                    .AllowColumnResizing(true)
+                                    .ColumnHidingEnabled(true)
+                                    .Columns(columns => {
+                                        columns.AddFor(m => m.TenKhach).Caption("Họ tên");
+                                        columns.AddFor(m => m.ChucDanh).Caption("Chức danh");
+                                        columns.AddFor(m => m.SoCccd).Caption("Số căn cước");
+                                        columns.AddFor(m => m.GioiTinh).Caption("Giới tính");                                        
+                                        columns.AddFor(m => m.Sdt).Caption("Sdt");
+                                    })
+                                )
+                            </text>);
+                        })
+                        .Paging(p => p.PageSize(10))
+                        .Pager(p => p
+                        .Visible(true)
+                        .ShowPageSizeSelector(true)
+                        .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+                        .ShowInfo(true)
+                        )
+                        .OnRowPrepared("onRowPrepared")
+                        .OnSelectionChanged(@<text>
+                            function(e) {
+                                e.component.collapseAll(-1);
+                                e.component.expandRow(e.currentSelectedRowKeys[0]);
+                            }
+                        </text>)
+                     )
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Phản hồi không duyệt lịch -->
+@(Html.DevExtreme().Popup()
+    .ID("popupphanhoi")
+    .Title("Thông báo")
+    .Width(500)
+    .ShowCloseButton(true)
+    .Visible(false)
+    .ContentTemplate(@<text>
+        <form method="post" >
+            <div style="color: gray; font-size:12px">
+                <p>Lịch đặt bị trùng phòng trong khung thời gian với lịch đã được duyệt khác.</p>
+                <p>Vui lòng nhập lý do không thể duyệt để gửi phản hồi.</p>
+            </div> <br/>
+            <div class="dx-field">
+                <div class="dx-field-label">Mã đặt phòng:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox()
+                        .ID("malich")                       
+                        .ReadOnly(true)
+                    )
+                </div>
+            </div>
+            <div class="dx-field">                
+                <div class="dx-field-label">Lý do:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextArea()
+                        .ID("GhiChu")                        
+                        
+                     )
+                </div>               
+            </div>
+            <input type="hidden" id="khachid" />
+            <div class="dx-field">
+                <div class="col-12" style="text-align: right;padding-top:30px">
+                    <button type="button" class="btn btn-success" onclick="confirmPhanHoi()">Gửi phản hồi</button>
+                </div>
+            </div>
+        </form>
+    </text>)
+
+)
+
+
+
+<script>    
+    //Chuyển tab
+    function TabsItemClick(e) {
+        var LichChoDuyet = document.getElementById("LichChoDuyet");
+        var DanhSachLich = document.getElementById("DanhSachLich");
+
+        if (e.itemData.Id == 0) {
+            LichChoDuyet.style.display = "block";
+            DanhSachLich.style.display = "none";
+
+            var grid1 = $("#gridLichChoDuyet").dxDataGrid("instance");
+            if (grid1) grid1.repaint();
+        }
+
+        if (e.itemData.Id == 1) {
+            LichChoDuyet.style.display = "none";
+            DanhSachLich.style.display = "block";
+
+            var grid2 = $("#gridDanhSachLich").dxDataGrid("instance");
+            if (grid2) grid2.repaint();
+        }
+    }
+
+    /* Duyệt lịch */
+
+    //Duyệt lịch
+    function DuyetLich(e) {
+        var id = e.row.data.Id;      
+        var khach = e.row.data.KhachId;        
+
+        DevExpress.ui.dialog.confirm("Bạn có chắc chắn muốn duyệt lịch này? ", "Xác nhận").then(function (result) {
+            if (result) {
+                $.ajax({
+                    type: "POST",
+                    url: 'DanhSachLich?handler=DuyetLich',
+                    data: { lichId: id, khachId: khach },
+                    success: function (data) {
+                        if (data.success) {
+                            DevExpress.ui.notify("Lịch đã được duyệt thành công", "success", 3000);
+                            location.reload();
+                        } else {
+                            if (data.phanhoi) {
+                                var popup = $("#popupphanhoi").dxPopup("instance");
+                                popup.show();
+
+                                popup.option("onShown", function () {
+                                    $("#malich").dxTextBox("instance").option("value", id);
+                                    $("#khachid").val(khach);
+                                });
+                            } else {
+                                DevExpress.ui.notify(data.message, "error", 3000);
+                            }
+                        }
+                    },
+                    error: function () {
+                        DevExpress.ui.notify("Có lỗi xảy ra trong quá trình duyệt lịch", "error", 3000);
+                    }
+                });
+            }
+        });
+    }
+
+    //Phản hồi không duyệt   
+    function confirmPhanHoi(e) {
+        var id = $("#malich").dxTextBox("instance").option("value");
+        var khach = $("#khachid").val();
+        console.log("khach ", khach);
+        var ghichu = $("#GhiChu").dxTextArea("instance").option("value");
+     
+        if (ghichu == "") {
+            DevExpress.ui.notify("Vui lòng nhập lý do phản hồi", "warning", 3000);
+            return;
+        }
+        $.ajax({
+            type: "POST",
+            url: 'DanhSachLich?handler=PhanHoiLich',
+            data: { lichId: id, ghichu: ghichu, khachId: khach },
+            success: function (data) {
+                if (data.success) {
+                    DevExpress.ui.notify("Phản hồi không duyệt lịch thành công", "success", 3000);
+                    $("#popupphanhoi").dxPopup("instance").hide();
+                    location.reload();
+                } else {
+                    DevExpress.ui.notify(data.message, "error", 3000);
+                }
+            },
+            error: function () {
+                DevExpress.ui.notify("Có lỗi xảy ra trong quá trình phản hồi lịch", "error", 3000);
+            }
+        });
+    }
+
+
+   
+
+    /* Danh sách lịch */
+    function onRowPrepared(e) {
+        if (e.rowType === "data" && e.data.TrangThai === true ) {
+            $(e.rowElement).css("color", "#808080");
+        }
+    }
+
+    // function SetColorRow(e) {
+
+    //     if (e.rowType == "data") {
+    //         if (e.data.TinhTrangId === 1) {
+    //             e.rowElement.css("color", "#eee5de");
+    //         }
+    //         if (e.data.TinhTrangId === 2) {
+    //             e.rowElement.css("color", "#fff8dc");
+    //         }
+    //         if (e.data.TinhTrangId === 3) {
+    //             e.rowElement.css("color", "#faf0e6");
+    //         }
+    //         if (e.data.TinhTrangId === 4) {
+    //             e.rowElement.css("color", "#FDF5E6");
+    //         }
+    //         if (e.data.TinhTrangId === 5) {
+    //             e.rowElement.css("color", "#99FF66");
+    //         }
+    //         if (e.data.TinhTrangId === 6) {
+    //             e.rowElement.css("color", "#ccc");
+    //         }
+
+    //     }
+
+    // }
+
+    
+
+</script>

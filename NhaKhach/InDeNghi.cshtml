@@ -1,0 +1,39 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.InDeNghiModel
+
+
+@{
+    ViewData["Title"] = "In Đề Nghị";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+
+@using Microsoft.AspNetCore.Http;
+
+
+
+<link href="~/css/viewer.part.bundle.css" rel="stylesheet" />
+<script src="~/js/viewer.part.bundle.js"></script>
+
+
+<script type="text/javascript">
+    function InitDevExWebDocumentViewer(s, e) {
+        s.GetReportPreview().zoom = DevExpress.Reporting.Viewer.ZoomAutoBy.PageWidth;
+        s.GetReportPreview().showMultipagePreview = true;
+    }
+
+</script>
+
+
+
+@* <div id="container" style="width: 900px;"> *@
+    @(Html.DevExpress().WebDocumentViewer("WebDocumentViewer").ClientSideEvents(s => { s.BeforeRender("InitDevExWebDocumentViewer"); })
+        .Bind(Model.report)
+        .Height("1000px")
+
+        )
+@* </div> *@
+
+
+
+

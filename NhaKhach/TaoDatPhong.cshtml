@@ -1,0 +1,546 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.TaoDatPhongModel
+@using TMS_ModelCore.Models
+
+
+@{
+    ViewData["Title"] = "Tạo đặt phòng";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+<style>
+    .dx-field-label {
+        width: 100% !important;
+    }
+
+    .dx-field-value {
+        width: 100% !important;
+    }
+
+    .dx-field-value:not(.dx-widget) > .dx-button, .dx-field-value:not(.dx-widget) > .dx-checkbox, .dx-field-value:not(.dx-widget) > .dx-switch {
+        float: left;
+    }    
+
+    .show-text {
+        border-bottom: 1px solid darkgrey;
+        background-color: #f0f2f5;
+        margin-bottom: 10px;
+        padding: 8px 5px;
+        height: 35px;
+        color: #355681;
+    }
+
+</style>
+
+
+<h2 class="content-block titlePage"> Tạo đặt phòng</h2>
+
+<form id="form" method="post" enctype="multipart/form-data" style="margin-top: 20px; " onsubmit="return validateForm()">
+    @Html.AntiForgeryToken()
+    <!-- Thông tin đề nghị -->
+    <div class="dx-field" style="margin-bottom: 30px;">
+        <h4 class="show-text"><i class="fas fa-file-alt"></i> Thông tin đề nghị</h4>
+
+        <div class="dx-field row">
+            <div class="col">
+                <div class="dx-field-label">Người đặt</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DropDownBox().ID("NguoiDatId").Name("NguoiDatId")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/Vienchucs").Expand("TaiKhoan")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(d => d.Filter(" ['LoaiVienChucId', '<>', 2223] "))
+                        .ValueExpr("Id")
+                        .DisplayExpr(new JS("nguoidat_displayExpr"))
+                        .DataSourceOptions(d =>
+                        {
+                            d.Select(new string[] { "Id", "Ho", "TenDem", "Ten", "MaVienchuc", "FullName" });
+                            d.Paginate(true);
+                        }) 
+                        .Value(Model.DatPhong != null ? Model.DatPhong.NguoiDatId : Model.VienChucId)
+                        .DeferRendering(true)
+                        .ShowClearButton(true)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                       /// .ContentTemplate(new TemplateName("listNguoiDat"))                        
+                      )
+                </div>
+            </div>
+            <div class="col">
+                <div class="dx-field-label">Đề nghị</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().Lookup().ID("DeNghiId").Name("DeNghiId")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/GhDeNghis")
+                            .Key("Id").BeforeSend("dvtm")
+                        ).DisplayExpr(new JS("denghi_displayExpr")).ValueExpr("Id")
+                        .DataSourceOptions(f => f.Filter("[ ['TinhTrangId', '<>', 8] ]"))
+                        .ShowClearButton(true)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .Value(Model.denghiID > 0 ? Model.denghiID : null)
+                        .OnValueChanged(@<text>
+                            function (e){
+                                var idDeNghi = e.value;
+                                if(idDeNghi){ LoadDSKhach(idDeNghi); }
+                            }
+                        </text>)
+                        )
+                </div>
+            </div>           
+        </div>   
+        <!-- Biểu tượng loading-->
+        <div id="load" style="display: none;color: #007bff; margin-top:5px;">
+            &nbsp; <i class="fas fa-spinner"></i> Đang tải thông tin đề nghị ...
+        </div>
+        <div class="dx-field row" style="margin-right: -15px !important; margin-left: -15px !important;">
+            <div class="col">
+                <div class="dx-field-label">Đơn vị đặt</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DropDownBox().ID("DonViId").Name("DonViId")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/DonVis").Expand("Parent")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(s => s.Filter("[['LoaiDonViId','<>',2585],'and',['LoaiDonViId','<>',2228],'and',['TrangThaiId','=',4]]"))
+                        .DisplayExpr("TenDonVi").ValueExpr("Id")
+                        .Value(Model.donviID > 0 ? Model.donviID : null)
+                        .DeferRendering(true)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        )
+                </div>
+            </div>
+            <div class="col">
+                <div class="dx-field-label">Tên khách</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().Lookup().ID("KhachId").Name("KhachId")                    
+                        .DataSource(Model.DanhSachKhach)
+                        .DisplayExpr("TenKhach").ValueExpr("Id")
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .Value(Model.khachID > 0 ? Model.khachID : null)
+                    )
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thông tin lịch đặt -->
+    <div class="dx-field" style="margin-bottom: 30px;">
+        <h4 class="show-text"><i class="far fa-calendar"></i> Thông tin lịch đặt</h4>
+
+        <div class="dx-field row">
+            <div class="col">
+                <div class="dx-field-label">Loại phòng:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DropDownBox().ID("LoaiId").Name("LoaiId")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/GhLoaiPhongs")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(s => s.Filter("['TrangThai', '=', false]"))
+                        .DisplayExpr(new JS("loai_displayExpr"))
+                        .ValueExpr("Id")
+                        .Value(Model.loaiID > 0 ? Model.loaiID : null)
+                        .ShowClearButton(true)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .ContentTemplate(new TemplateName("listLoaiPhong"))
+                        .OnValueChanged(@<text>
+                            function (e){
+                                var idLoai = e.value;                              
+                                if(idLoai){ LoadPhong(idLoai); }
+                            }
+                        </text>)
+                     )
+                </div>
+            </div>
+            <div class="col">
+                <div class="dx-field-label">Phòng:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().Lookup().ID("PhongId").Name("PhongId")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/GhPhongs").Expand("Loai")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(s => s.Filter("['TrangThai', '=', false]"))
+                        .ValueExpr("Id")
+                        .DisplayExpr(new JS("phong_displayExpr"))
+                        .Value(Model.phongID > 0 ? Model.phongID : null)
+                        .ShowClearButton(true)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .OnValueChanged(@<text>
+                            function (e){
+                                var idPhong = e.value;                              
+                                if(idPhong){ LoadLoai(idPhong); }
+                            }
+                        </text>)
+                    )
+                </div>
+            </div>                
+        </div>
+        <!-- Biểu tượng loading-->
+        <div id="loading" style="display: none;color: #007bff; margin-top:5px;">
+            &nbsp; <i class="fas fa-spinner"></i> Đang tải thông tin phòng ...
+        </div>
+
+        <div class="dx-field row">
+            <div class="col">
+                <div class="dx-field-label">Từ ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DateBox().ID("TuNgay").Name("TuNgay")
+                        .Type(DateBoxType.DateTime).DisplayFormat("dd/MM/yyyy HH:mm:ss")
+                        .Value(Request.Query["start"].ToString() != "" ? DateTime.Parse(Request.Query["start"].ToString()) : DateTime.Now )
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .DisabledDates("DisabledDate")
+                        )
+                </div>
+            </div>
+            <div class="col">
+                <div class="dx-field-label">Đến ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DateBox().ID("DenNgay").Name("DenNgay")
+                        .Type(DateBoxType.DateTime).DisplayFormat("dd/MM/yyyy HH:mm:ss")
+                        .Value(Request.Query["end"].ToString() != "" ? DateTime.Parse(Request.Query["end"].ToString()) : DateTime.Now)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .DisabledDates("DisabledDate")
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="dx-field row" >
+            <div class="col" style="display:flex;">
+                <div class="dx-field-label" style="width: 15% !important;">Nguyên ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().CheckBox().ID("AllDay").Name("AllDay")
+                        .Value(Model.DatPhong != null ? Model.DatPhong.AllDay : false)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .OnValueChanged("CheckAllDay")
+                        )
+                </div>
+            </div>           
+        </div>
+
+        <div class="dx-field row" style="margin-right: -15px !important; margin-left: -15px !important;">            
+            <div class="col"> 
+                <div class="dx-field-label">Ghi chú:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextArea().ID("GhiChu").Name("GhiChu")
+                    .Height(100)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        )
+                </div>
+            </div>
+        </div>
+    </div>
+   
+
+   <div class="dx-field">
+        @(Html.DevExtreme().Button()
+            .ID("btndat")
+            .Icon("far fa-calendar-alt")
+            .Text("Đặt phòng")
+            .Type(ButtonType.Success)
+           .UseSubmitBehavior(true)
+            )
+
+        @(Html.DevExtreme().Button()
+            .ID("btnhuy")
+            .Icon("fas fa-times")
+            .Text("Hủy")
+            .Type(ButtonType.Normal)
+            .OnClick("function() { window.location.href = '/NhaKhach/LichDatPhong'; }")
+            )
+   </div>
+
+</form>
+
+
+<!-- Danh sách người đặt -->
+@using (Html.DevExtreme().NamedTemplate("listNguoiDat"))
+{
+    @(Html.DevExtreme().DataGrid()
+        .ID("gridNguoiDat")
+        .DataSource(new JS(@"component.getDataSource()"))
+        .Columns(columns => {
+@*          columns.Add().DataField("Ho").Caption("Họ");
+            columns.Add().DataField("TenDem").Caption("Tên đệm");
+            columns.Add().DataField("Ten").Caption("Tên");
+            columns.Add().DataField("TaiKhoan[0].Email").Caption("Email"); *@
+            columns.Add().DataField("MaVienChuc").Caption("Mã viên chức").Width(100);
+            columns.Add().DataField("FullName").Caption("Họ tên");
+            columns.Add().DataField("TaiKhoan[0].Email").Caption("Email");            
+        })
+        .HoverStateEnabled(true)
+        .FilterRow(f => f.Visible(true))        
+        .ShowColumnHeaders(true)
+        .Height(300)
+        .Scrolling(s => s.Mode(GridScrollingMode.Infinite))
+        .Selection(s => s.Mode(SelectionMode.Single).ShowCheckBoxesMode(GridSelectionShowCheckBoxesMode.Always))
+        .SelectedRowKeys(new JS(@"component.option('value')"))
+        .OnSelectionChanged(@<text>
+            function (selectedItems){
+                var keys = selectedItems.selectedRowKeys;
+                var nguoidat = $("#NguoiDatId").dxDropDownBox("instance");
+                    nguoidat.option("value", keys[0]);
+                    nguoidat.close();
+            }
+        </text>)
+    )   
+}
+
+<!-- Danh sách loại phòng -->
+@using (Html.DevExtreme().NamedTemplate("listLoaiPhong"))
+{
+    @(Html.DevExtreme().DataGrid()
+        .ID("gridLoaiPhong")
+        .DataSource(new JS(@"component.getDataSource()"))
+        .Columns(columns => {
+            columns.Add().DataField("MaLoai").Caption("Mã loại");
+            columns.Add().DataField("TenLoai").Caption("Tên loại");           
+            columns.Add().DataField("SoLuongToiDa").Caption("Sức chứa")
+                .CustomizeText(@<text>
+                    function (e){
+                        return e.value + " khách";
+                    }
+                </text>);
+        })
+        .HoverStateEnabled(true)
+        .ShowColumnHeaders(true)
+        .Height(200)
+        .Scrolling(s => s.Mode(GridScrollingMode.Infinite))
+        .Selection(s => s.Mode(SelectionMode.Single).ShowCheckBoxesMode(GridSelectionShowCheckBoxesMode.Always))
+        .SelectedRowKeys(new JS(@"component.option('value')"))
+        .OnSelectionChanged(@<text>
+            function (selectedItems){
+                var keys = selectedItems.selectedRowKeys;
+                var loai = $("#LoaiId").dxDropDownBox("instance");
+                    loai.option("value", keys[0]);
+                    loai.close();
+            }
+        </text>)    
+    )
+}
+
+
+
+
+<script>
+    //Hiển trị người đặt
+    function nguoidat_displayExpr(item) {
+        if (!item) {
+            return "";
+        }
+      return item.Ho + " " + (item.TenDem == "null" || item.TenDem == null ? "" : item.TenDem) + " " + item.Ten + (item.TaiKhoan == null || item.TaiKhoan == "" ? "" : " (" + item.TaiKhoan[0].Email + ")");    
+    }
+
+    //Hiển thị loại phòng
+    function loai_displayExpr(item){
+        if (!item) {
+            return "";
+        }
+        return item.MaLoai + " - " + item.TenLoai;
+    }
+
+    //Hiển thị phòng 
+    function phong_displayExpr(item){
+        if(!item){
+            return "";
+        }
+        return item.MaPhong + " - " + item.TenPhong ;
+    }
+
+    //Hiển thị đề nghị
+    function denghi_displayExpr(item){
+        if(!item) {
+            return "";
+        }
+        return "Đề nghị " + item.Id + " ( " + item.SoLuongKhach + " khách )";
+    }
+
+    function DisabledDate(pickdate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const selectdate = new Date(pickdate.date);
+              selectdate.setHours(0, 0, 0, 0);
+
+        return selectdate < today;
+       
+    }
+
+
+    //Load Loại phòng - phòng
+    var idPhong = @Model.phongID;
+    var idLoai = @Model.loaiID;    
+
+    function LoadPhong(idLoai) {       
+        $("#loading").show();
+        $.ajax({
+            type: "GET",
+            url: 'TaoDatPhong?handler=LoadPhongByLoai',
+            data: { loaiId: idLoai },
+            success: function (data) {
+                $("#loading").hide();
+                var phongDropdown = $("#PhongId").dxLookup("instance");
+                phongDropdown.option("onValueChanged", null);
+
+                phongDropdown.option("dataSource", data.loadPhong);
+                phongDropdown.option("value", idPhong || null);            
+
+                phongDropdown.option("onValueChanged", function (e) {
+                    var idPhong = e.value;
+                    if (idPhong) {
+                        LoadLoai(idPhong);
+                    }
+                });
+            },
+            error: function (xhr, status, error) {
+                console.error("Lỗi:", error);
+            },
+        });
+    }
+
+    function LoadLoai(idPhong) {       
+        $("#loading").show();
+        $.ajax({
+            type: "GET",
+            url: 'TaoDatPhong?handler=LoadLoaiPhong',
+            data: { phongId: idPhong },
+            success: function (data) {
+                $("#loading").hide();
+
+                var loaiDropdown = $("#LoaiId").dxDropDownBox("instance");
+                loaiDropdown.option("onValueChanged", null);
+                loaiDropdown.option("value", data.id || null);
+
+                loaiDropdown.option("onValueChanged", function (e) {
+                    var idLoai = e.value;
+                    if (idLoai) {
+                        LoadPhong(idLoai);
+                    }
+                });
+            },
+            error: function (xhr, status, error) {
+                console.error("Lỗi:", error);
+            },
+        });
+    }
+       
+    //Load danh sách khách của đề nghị
+     var idDeNghi = @Model.denghiID;
+
+    function LoadDSKhach(idDeNghi) {
+        $("#load").show();
+        $.ajax({
+            type: "GET",
+            url: 'TaoDatPhong?handler=LoadKhach',
+            data: {denghiId: idDeNghi},
+            success: function (data) {
+                   $("#load").hide();
+                var donvi = $("#DonViId").dxDropDownBox("instance");                                
+                    donvi.option("value", data.donvi || null);     
+                    
+                var khach = $("#KhachId").dxLookup("instance");
+                    khach.option("dataSource", data.loadkhach);
+                    console.log("data ", khach.option("dataSource"));
+
+                if (data.loadkhach.length > 0) {
+                    khach.option("value", data.loadkhach[0].Id);
+                } else {
+                    khach.option("value", null);
+                }
+            },
+            error: function (xhr, status, error) {
+                $("#load").hide();
+                console.error("Lỗi:", error);
+            },
+        });
+    }
+
+
+    // Set thời gian AllDay
+    function CheckAllDay(data){
+        if (data.value) {        
+            const start = new Date($("#TuNgay").dxDateBox("instance").option("value"));           
+            const end = new Date($("#DenNgay").dxDateBox("instance").option("value"));            
+
+            $("#TuNgay").dxDateBox("instance").option("value", new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0));
+            $("#DenNgay").dxDateBox("instance").option("value", new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 0));
+
+            $("#TuNgay").dxDateBox("instance").option("disabled", true);
+            $("#DenNgay").dxDateBox("instance").option("disabled", true);
+
+            $("#TuNgay").dxDateBox({ readOnly: true });
+            $("#DenNgay").dxDateBox({ readOnly: true });
+
+        } else {
+            $("#TuNgay").dxDateBox("instance").option("value", new Date());
+            $("#DenNgay").dxDateBox("instance").option("value", new Date());
+
+            $("#TuNgay").dxDateBox("instance").option("disabled", false);
+            $("#DenNgay").dxDateBox("instance").option("disabled", false);
+
+            $("#TuNgay").dxDateBox({ readOnly: false });
+            $("#DenNgay").dxDateBox({ readOnly: false });
+        }
+    }
+
+
+    //Kiểm tra form 
+    $(function () {
+        $("#NguoiDatId").dxValidator({ validationRules: [{ type: "required", message: "Vui lòng chọn người đặt" }]  });
+        $("#DeNghiId").dxValidator({ validationRules: [{ type: "required", message: "Vui lòng chọn đề nghị" }] });
+        $("#KhachId").dxValidator({ validationRules: [{ type: "required", message: "Vui lòng chọn khách trong đề nghị" }] });
+        $("#LoaiId").dxValidator({ validationRules: [{ type: "required", message: "Vui lòng chọn loại phòng" }] });
+        $("#PhongId").dxValidator({ validationRules: [{ type: "required", message: "Vui lòng chọn phòng" }] });               
+    });    
+
+    function validateForm() {      
+        const start = new Date($("#TuNgay").dxDateBox("instance").option("value"));
+        const end = new Date($("#DenNgay").dxDateBox("instance").option("value"));
+
+        //Thời gian bắt đầu, kết thúc không bằng nhau
+        if (start.getTime() === end.getTime()) {
+            DevExpress.ui.notify("Thời gian bắt đầu và kết thúc không được bằng nhau!", "warning", 3000);
+            return false;
+        }
+        //Thời gian bắt đầu nhỏ hơn kết thúc
+        if (start.getTime() > end.getTime()) {
+            DevExpress.ui.notify("Thời gian bắt đầu không được lớn hơn thời gian kết thúc!", "warning", 3000);
+            return false;
+        }          
+        return true;
+    }
+
+
+    $("#form").on("submit", function (e) {
+        e.preventDefault();
+        if (!validateForm() ) {
+            return false;
+        }             
+
+        var formData = $(this).serialize();
+        console.log("form ", formData);
+
+        $.ajax({
+            type: "POST",
+            url: window.location.pathname,
+            data: formData,
+            success: function (data) {
+                if (data.success) {
+                    DevExpress.ui.notify("Đặt phòng thành công", "success", 3000);
+                
+                    setTimeout(function () {
+                        window.location.href = "ChiTietLichDat?id=" + data.id;                        
+                    }, 1000);
+                } else {
+                    DevExpress.ui.notify(data.message, "error", 3000);
+                }
+            },
+            error: function () {
+                DevExpress.ui.notify("Có lỗi trong quá trình đặt lịch", "error", 3000);
+            }
+        });
+    });
+
+
+
+</script>

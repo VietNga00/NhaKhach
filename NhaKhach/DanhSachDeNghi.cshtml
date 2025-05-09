@@ -1,0 +1,291 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.DanhSachDeNghiModel
+@using TMS_ModelCore.Models
+
+
+@{
+    ViewData["Title"] = "Danh sách đề nghị";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+<style>
+    .dx-datagrid-content .dx-datagrid-table .dx-row > td, .dx-datagrid-content .dx-datagrid-table .dx-row > tr > td {
+        white-space: normal !important;
+    }
+
+    .custom-button {
+        border: 1px solid #ccc !important;
+        border-radius: 3px !important;
+        background-color: white !important;
+        color: #333 !important;
+    }
+
+    .custom-button:hover {
+        background-color: #d9d9d9 !important;
+    }
+
+    .custom-button .dx-icon, .custom-button .fas {
+        color: #333 !important;
+    }
+
+    .dx-datagrid .dx-datagrid-content .dx-datagrid-table .dx-row .dx-command-edit-with-icons .dx-link {
+        width: 35px !important;
+        height: 35px !important;
+        padding: 7px !important;
+    }
+</style>
+
+
+
+<h2 class="content-block titlePage">Danh sách đề nghị</h2>
+
+
+@(Html.DevExtreme().DataGrid<GhDeNghi>()
+    .ID("grid")
+    .DataSource(d => d.OData().Version(4)
+        .Url("https://tms.tvu.edu.vn:10220/api/GhDeNghis").Expand("TinhTrang", "NguoiTao", "DonVi")
+        .Key("Id").BeforeSend("dvtm")
+    )
+    .ShowBorders(true)
+    .FilterRow(f => f.Visible(true))
+    .FocusedRowEnabled(true)
+    .FocusedRowIndex(0)
+    .Selection(s => s.Mode(SelectionMode.Single))
+    .SearchPanel(searchPanel => searchPanel
+        .Visible(true)
+        .Width("Auto")
+        .Placeholder("Nhập từ khóa tìm kiếm...")
+    )
+    .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+    .ColumnAutoWidth(true)
+    .AllowColumnResizing(true)
+    .ColumnHidingEnabled(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.Id).Caption("Mã đề nghị").Width(60);
+        columns.AddFor(m => m.DonVi.TenDonVi).Caption("Đơn vị").Name("DonVi");
+        columns.AddFor(m => m.NoiDung).Caption("Nội dung đề nghị");
+        columns.AddFor(m => m.SoLuongKhach).Caption("Số lượng khách").Width(60);               
+        columns.AddFor(m => m.NguoiTao.FullName).Caption("Người tạo");
+        columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng");
+        columns.AddFor(m => m.GhiChu).Caption("Ghi chú");
+        columns.AddFor(m => m.NgayTao).Visible(false).SortOrder(SortOrder.Desc);       
+    })
+    .Summary(s => s.TotalItems(items =>
+        {
+            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("DonVi").DisplayFormat("Tổng: {0} ");
+        })
+    )
+    .Paging(p => p.PageSize(20))
+    .Pager(p => p
+         .Visible(true)
+         .ShowPageSizeSelector(true)
+         .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+         .ShowInfo(true)
+    )
+    .MasterDetail(md =>
+    {
+        md.Enabled(true);
+        md.Template(new TemplateName("DeNghi_MasterDetail"));
+    })  
+    .OnContextMenuPreparing("LoadContextMenu")
+    .OnSelectionChanged(@<text>
+        function(e) {
+            e.component.collapseAll(-1);
+            e.component.expandRow(e.currentSelectedRowKeys[0]);
+        }
+    </text>)   
+
+)
+
+<!-- MasterDetail  -->
+@using (Html.DevExtreme().NamedTemplate("DeNghi_MasterDetail"))
+{
+    @(Html.DevExtreme().TabPanel()
+        .Items(items => {
+            items.Add().Title("Danh sách khách")
+                .Template(@<text>
+                    @(Html.DevExtreme().DataGrid<GhDanhSachKhach>()
+                        .ID(new JS("'DSKhach_' + tabExtras.Id"))
+                        .DataSource(d => d.OData().Version(4).Url("https://tms.tvu.edu.vn:10220/api/GhDanhSachKhachs").Key("Id").BeforeSend("dvtm").Expand("DeNghi"))
+                        .DataSourceOptions(f => f.Filter(new JS("[[ 'DeNghiId', '=', tabExtras.Id ]]")))                                          
+                        .ColumnAutoWidth(true)
+                        .AllowColumnResizing(true)
+                        .ColumnHidingEnabled(true)
+                        .Columns(columns => {
+                            columns.Add().Type(GridCommandColumnType.Buttons).Width(70)
+                                .Buttons(b =>
+                                {
+                                    b.Add().Hint("Đặt lịch").Icon("far fa-calendar-plus").Text("Đặt lịch").CssClass("custom-button").OnClick("DatLich").Visible(new JS("isDatLichVisible"));  
+                                    b.Add().Hint("In đề nghị thuê ngoài").Icon("fas fa-print").Text("In lịch").CssClass("custom-button").OnClick("PrintDeNghi").Visible(new JS("isPrintVisible"));
+                                });
+                            columns.Add().Caption("STT").CellTemplate(new JS("SoThuTu"));
+                            columns.AddFor(m => m.TenKhach).Caption("Họ tên");
+                            columns.AddFor(m => m.ChucDanh).Caption("Chức danh");
+                            columns.AddFor(m => m.SoCccd).Caption("Số căn cước");
+                            columns.AddFor(m => m.GioiTinh).Caption("Giới tính");                       
+                            columns.AddFor(m => m.Sdt).Caption("Sdt");
+                            columns.AddFor(m => m.TrangThai).Caption("Trạng thái").Lookup(lookup => lookup
+                                .DataSource(new[] {                                  
+                                    new { Id = 0, Name = "Chờ duyệt lịch" },
+                                    new { Id = 1, Name = "Lịch đã duyệt" },
+                                    new { Id = 2, Name = "Không duyệt" }
+                                }).ValueExpr("Id").DisplayExpr("Name")
+                            );
+                        })
+
+                    )
+                </text>)
+                .Option("tabExtras", new JS("data"));
+
+            items.Add().Title("Lịch đặt phòng của khách")
+                .Template(@<text>
+                    @(Html.DevExtreme().DataGrid<GhDatPhong>()                       
+                         .ID(new JS("'LDKhach_' + tabExtras.Id"))
+                        .DataSource(d => d.OData().Version(4).Url("https://tms.tvu.edu.vn:10220/api/GhDatPhongs").Key("Id").BeforeSend("dvtm").Expand("Khach", "Phong", "TinhTrang"))                                       
+                        .DataSourceOptions(f => f.Filter(new JS("[['DeNghiId', '=', tabExtras.Id]]")))
+                        .ColumnAutoWidth(true)
+                        .AllowColumnResizing(true)
+                        .ColumnHidingEnabled(true)
+                        .Columns(columns => {
+                            columns.Add().Type(GridCommandColumnType.Buttons).Width(60)
+                                .Buttons(b =>
+                                {
+                                    b.Add().Hint("Đổi phòng").Icon("far fa-edit").Text("Chỉnh sửa lịch").CssClass("custom-button").OnClick("EditLich").Visible(new JS("isEditVisible"));                                  
+                                });
+                            columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
+                            columns.AddFor(m => m.Khach.TenKhach).Caption("Tên khách").MinWidth(200);
+                            columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
+                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").MinWidth(125);
+                            columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").MinWidth(125);
+                            columns.AddFor(m => m.AllDay).Caption("Cả ngày").Width(60);
+                            columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng lịch");
+                            columns.AddFor(m => m.GhiChu).Caption("Ghi chú");   
+                        })                       
+                    )
+                </text>)
+                .Option("tabExtras", new JS("data"));             
+        })
+    )
+}
+
+
+
+
+<script>
+    function SoThuTu(container, e) {
+        var index = e.component.pageIndex() * e.component.pageSize() + e.rowIndex + 1;
+        container.text(index);
+    }
+
+/***** Danh sách đề nghị *****/
+
+    //Check lịch của khách trong đề nghị
+    $(document).ready(function () {
+        $.ajax({
+            type: "GET",
+            url: 'DanhSachDeNghi?handler=CheckStatus',
+            success: function (data) {
+                if (data.success) {
+                    $("#grid").dxDataGrid("instance").refresh();
+                }
+            }
+        });
+    });
+
+    function LoadContextMenu(e) {
+        if (e.row.rowType === "data") {
+            if (e.row.data.TinhTrangId == 8) { //Hoàn tất
+                e.items = [{
+                    text: "In đề nghị",
+                    icon: "print",
+                    onItemClick: function () {
+                     
+                        window.location.href = 'InDeNghi?denghi=' + e.row.data.Id;
+                    }
+                }];
+            }
+            else {
+                if (e.row.data.TinhTrangId == 7) { //Khởi tạo
+                    e.items = [
+                        {
+                            text: "Chỉnh sửa",
+                            icon: "edit",
+                            onItemClick: function () {                              
+                                window.location.href = 'TaoDeNghi?denghiID=' + e.row.data.Id;
+                            }
+                        },
+                        {
+                            text: "Hủy đề nghị",
+                            icon: "remove",
+                            onItemClick: function(){
+                                console.log("Hủy đề nghị");
+                                HuyDeNghi(e.row.data.Id);
+                                location.refresh();
+                            }
+                        }
+                    ];
+                } 
+            }
+        }
+    } 
+
+    function HuyDeNghi(id){
+        $.ajax({
+            type: "POST",
+            url: 'DanhSachDeNghi?handler=HuyDeNghi',
+            data: { id: id },
+            success: function (data) { 
+                if (data.success) {
+                    DevExpress.ui.notify("Hủy đề nghị thành công.", "success", 3000);
+                } else {
+                    DevExpress.ui.notify(data.message, "error", 3000);
+                }
+            },
+            error: function () {
+                DevExpress.ui.notify("Có lỗi trong quá trình hủy đề nghị", "error", 3000);
+            }
+
+        });
+    }
+      
+
+/***** MasterDetail -  Danh sách khách *****/
+    function isDatLichVisible(e) {
+        return e.row.data.TrangThai === null; //chưa có lịch
+    }
+
+    function DatLich(e){       
+        var khachId = e.row.data.Id; 
+        var denghiId = e.row.data.DeNghiId;
+        
+        window.location.href = 'LichDatPhong?denghi=' + denghiId + '&khach=' + khachId; 
+    }
+
+    function isPrintVisible(e) {
+        return e.row.data.TrangThai === 2; //Lịch từ chối
+    }
+
+    function PrintDeNghi(e) {
+        var khachId = e.row.data.Id;
+        var denghiId = e.row.data.DeNghiId;
+
+        window.location.href = 'InDeNghi?denghi=' + denghiId + '&khach=' + khachId;
+    }
+
+
+/***** MasterDetail - Lịch đặt của khách *****/
+    
+    function isEditVisible(e) {       
+        return e.row.data.TinhTrangId === 6; // Không duyệt
+    }
+
+    function EditLich(e){
+        var lichId = e.row.data.Id;
+      
+        window.location.href = 'ChinhSuaLichDat?lich=' + lichId;        
+    }
+   
+    
+
+</script>

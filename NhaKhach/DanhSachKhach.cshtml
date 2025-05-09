@@ -1,0 +1,78 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.DanhSachKhachModel
+@using TMS_ModelCore.Models;
+
+@{
+    ViewData["Title"] = "Danh sách khách";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+
+
+<h2 class="content-block titlePage">Danh sách khách</h2>
+
+
+@(Html.DevExtreme().DataGrid<GhDanhSachKhach>()
+    .ID("grid")
+    .DataSource(d => d.OData().Version(4)
+        .Url("https://tms.tvu.edu.vn:10220/api/GhDanhSachKhachs")            
+        .Key("Id").BeforeSend("dvtm")
+    )
+    .ShowBorders(true)
+    .FilterRow(f => f.Visible(true))
+    .FocusedRowEnabled(true)
+    .FocusedRowIndex(0)   
+    .SearchPanel(s => s
+        .Visible(true)
+        .Width("Auto")
+        .Placeholder("Nhập từ khóa tìm kiếm...")
+    )
+    .ColumnAutoWidth(true)
+    .AllowColumnResizing(true)
+    .ColumnHidingEnabled(true)
+    .Columns(columns =>
+    {
+        columns.Add().Caption("STT").CellTemplate(new JS("SoThuTu")).Width(80);
+        columns.AddFor(m => m.DeNghiId).Caption("Mã đề nghị").Width(100).SortOrder(SortOrder.Desc);
+        columns.AddFor(m => m.TenKhach).Caption("Tên khách");
+        columns.AddFor(m => m.SoCccd).Caption("Số căn cước");
+        columns.AddFor(m => m.GioiTinh).Caption("Giới tính");
+        columns.AddFor(m => m.Sdt).Caption("Sdt");
+        columns.AddFor(m => m.TrangThai).Caption("Trạng thái").Lookup(lookup => lookup
+            .DataSource(new[] {
+                new { Id = 0, Name = "Chờ duyệt lịch" },
+                new { Id = 1, Name = "Lịch đã duyệt" },
+                new { Id = 2, Name = "Không duyệt" }
+            }).ValueExpr("Id").DisplayExpr("Name")
+        );
+
+    })
+    .Summary(s => s.TotalItems(items =>
+        {
+            items.AddFor(m => m.TenKhach).SummaryType(SummaryType.Count).DisplayFormat("Tổng: {0} khách");
+        })
+    )
+    .Paging(p => p.PageSize(20))
+    .Pager(p => p
+        .Visible(true)
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
+        .ShowInfo(true)
+    )
+     .OnRowPrepared("onRowPrepared")
+)
+
+
+<script>
+    function SoThuTu(container, e) {
+        var index = e.component.pageIndex() * e.component.pageSize() + e.rowIndex + 1;
+        container.text(index);
+    }
+
+    function onRowPrepared(e) {
+        if (e.rowType === "data" && e.data.TrangThai === 2) {
+            $(e.rowElement).css("color", "#808080");
+        }
+    }
+
+</script>        

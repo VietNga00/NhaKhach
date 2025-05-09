@@ -1,0 +1,190 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.ChiTietLichDatModel
+@using TMS_ModelCore.Models
+
+@{
+    ViewData["Title"] = "Chi tiết lịch đặt";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+<style>
+    .show {
+        margin-bottom: 30px;
+    }
+    .show-text {
+        border-bottom: 1px solid darkgrey;
+        background-color: #f0f2f5;
+        margin-bottom: 20px;
+        margin-top: 20px;
+        padding: 8px 5px;
+        height: 35px;
+        color: #355681;
+    }
+
+    .dx-field {
+        width: 90%;
+    }
+
+    .dx-field-label {
+        font-weight: bold;
+    }
+</style>
+
+
+
+<h2 class="content-block titlePage">Thông tin chi tiết lịch đặt</h2>
+
+
+@try
+{
+    <div class="show">
+        <!-- Thông tin đề nghị -->
+        <h4 class="show-text"><i class="fas fa-file-alt"></i> Thông tin đề nghị</h4>
+
+        <div class="dx-field">
+            <div class="dx-field-label">Đề nghị:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().NumberBox()
+                    .ID("iddenghi")
+                    .Value(Model.DeNghi.Id)
+                    .ReadOnly(true))
+            </div>
+        </div>
+        <div class="dx-field">
+            <div class="dx-field-label">Đơn vị:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().TextBox()
+                    .ID("donvi")
+                    .Value(Model.DeNghi.DonVi.TenDonVi)
+                    .ReadOnly(true)
+                  )
+            </div>
+        </div>       
+        <div class="dx-field">
+            <div class="dx-field-label">Tên khách:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().TextBox()
+                    .ID("tenkhach")
+                    .Value(Model.DatPhong.Khach.TenKhach)
+                    .ReadOnly(true)
+                )
+            </div>
+        </div>
+      
+
+        <!-- Thông tin lịch đặt -->
+        <h4 class="show-text"> <i class="far fa-calendar"></i> Thông tin lịch đặt</h4>
+        <div class="dx-field">
+            <div class="dx-field-label">Mã đặt phòng:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().NumberBox()
+                    .ID("id")
+                    .Value(Model.DatPhong.Id)
+                    .ReadOnly(true)
+                 )
+            </div>
+        </div>
+        <div class="dx-field">
+            <div class="dx-field-label">Người đặt:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().TextBox()
+                    .ID("nguoidat")
+                    .Value(Model.DatPhong.NguoiDat.FullName)
+                    .ReadOnly(true)
+                 )
+            </div>
+        </div>
+        <div class="dx-field">
+            <div class="dx-field-label">Phòng:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().TextBox()
+                    .ID("phong")
+                    .Value(Model.DatPhong.Phong.MaPhong + " - " + Model.DatPhong.Phong.TenPhong)
+                    .ReadOnly(true)
+                 )
+            </div>
+        </div>
+        <div class="dx-field">
+            <div class="dx-field-label">Loại phòng:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().TextBox()
+                    .ID("loaiphong")
+                    .Value(Model.DatPhong.Phong.Loai.TenLoai)
+                    .ReadOnly(true)
+                 )
+            </div>
+        </div>
+        <div class="dx-field">
+            <div class="dx-field-label">Thời gian:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().TextBox()
+                    .ID("thoigian")
+                    .Value(Model.DatPhong.TuNgay.ToString("HH:mm dd/MM/yyyy") + " - " + Model.DatPhong.DenNgay.ToString("HH:mm dd/MM/yyyy") )
+                    .ReadOnly(true)
+                    )
+            </div>
+        </div>
+        <div class="dx-field">
+            <div class="dx-field-label">Tình trạng lịch:</div>
+            <div class="dx-field-value">
+                @(Html.DevExtreme().TextBox()
+                    .ID("tinhtrang")
+                    .Value(Model.TinhTrang.TenTinhTrang)
+                    .ReadOnly(true)
+                 )
+            </div>
+        </div>       
+    </div>
+}
+catch
+{
+    <p style="color:red">Không tìm thấy thông tin lịch đặt.</p>
+}
+
+@(Html.DevExtreme().Button()
+        .Text("Quay lại")
+        .OnClick("function() { window.location.href = '/NhaKhach/LichDatPhong'; }")
+        .Type(ButtonType.Normal)
+)
+
+@if (@Model.DatPhong.TinhTrangId == 1)
+{
+    @(Html.DevExtreme().Button()
+        .Text("Hủy lịch đặt")
+        .Icon("remove")
+        .Hint("Nhấn để hủy lịch đặt")
+        .Type(ButtonType.Danger)
+        .OnClick("HuyLich")
+
+    )
+}
+
+<script>
+    function HuyLich(e){
+        DevExpress.ui.dialog.confirm("Bạn có chắc muốn hủy lịch đặt?", "Xác nhận").then(function (result) {
+            if (result) {
+                var Id = @Model.DatPhong.Id;               
+
+                $.ajax({
+                    type: "POST",
+                    url: "ChiTietLichDat?handler=HuyLich",
+                    data: { Id: Id },
+                    success: function (data) { 
+                        if (data.success) {
+                            DevExpress.ui.notify("Hủy lịch đặt thành công", "success", 3000);
+                            setTimeout(function () {
+                                window.location.href = '/NhaKhach/LichDatPhong';
+                            }, 1000);
+                        } else {
+                            DevExpress.ui.notify(data.message, "error", 3000);
+                        }                                            
+                    },
+                     error: function () {},
+                });
+            }
+        })
+    }
+
+
+
+</script>

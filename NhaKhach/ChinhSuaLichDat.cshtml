@@ -1,0 +1,306 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.ChinhSuaLichDatModel
+@using TMS_ModelCore.Models
+
+@{
+    ViewData["Title"] = "Chỉnh sửa lịch đặt";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+<style>
+    .dx-field-label {
+        width: 100% !important;
+    }
+
+    .dx-field-value {
+        width: 100% !important;
+    }
+
+        .dx-field-value:not(.dx-widget) > .dx-button, .dx-field-value:not(.dx-widget) > .dx-checkbox, .dx-field-value:not(.dx-widget) > .dx-switch {
+            float: left;
+        }
+
+    .show-text {
+        border-bottom: 1px solid darkgrey;
+        background-color: #f0f2f5;
+        margin-bottom: 10px;
+        padding: 8px 5px;
+        height: 35px;
+        color: #355681;
+    }
+</style>
+
+
+
+<h2 class="content-block titlePage">Chỉnh sửa lịch đặt</h2>
+
+<form id="form" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" id="Id" name="Id" value="@Model.DatPhong.Id" />
+    <!-- Thông tin đề nghị -->
+    <div class="dx-field" style="margin-bottom: 30px;">
+        <h4 class="show-text"><i class="fas fa-file-alt"></i> Thông tin đề nghị</h4>
+
+        <div class="dx-field row">
+            <div class="col">
+                <div class="dx-field-label">Người đặt</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DropDownBox().ID("NguoiDatId").Name("NguoiDatId")
+                        .DataSource(d => d.OData().Version(4)
+                        .Url("https://tms.tvu.edu.vn:10220/api/Vienchucs").Expand("TaiKhoan")
+                        .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(d => d.Filter(" ['LoaiVienChucId', '<>', 2223] "))
+                        .ValueExpr("Id")
+                        .DisplayExpr(new JS("nguoidat_displayExpr"))
+                        .DataSourceOptions(d =>
+                        {
+                            d.Select(new string[] { "Id", "Ho", "TenDem", "Ten"});
+                            d.Paginate(true);
+                        })
+                        .Value(Model.DatPhong.NguoiDatId)                       
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>
+            <div class="col">
+                <div class="dx-field-label">Đề nghị</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox().ID("DeNghiId").Name("DeNghiId")
+                        .Value($"Đề nghị {Model.DatPhong.DeNghiId}")      
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>
+        </div>
+        <!-- Biểu tượng loading-->
+        <div id="load" style="display: none;color: #007bff; margin-top:5px;">
+            &nbsp; <i class="fas fa-spinner"></i> Đang tải thông tin đề nghị ...
+        </div>
+        <div class="dx-field row" style="margin-right: -15px !important; margin-left: -15px !important;">
+            <div class="col">
+                <div class="dx-field-label">Đơn vị đặt</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox().ID("DonViId").Name("DonViId")                    
+                        .Value(Model.DatPhong.DeNghi?.DonVi?.TenDonVi)
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>
+            <div class="col">
+                <div class="dx-field-label">Tên khách</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox().ID("KhachId").Name("KhachId")                      
+                        .Value(Model.DatPhong.Khach?.TenKhach)
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thông tin lịch đặt -->
+    <div class="dx-field" style="margin-bottom: 30px;">
+        <h4 class="show-text"><i class="far fa-calendar"></i> Thông tin lịch đặt</h4>
+
+        <div class="dx-field row">
+            <input type="hidden" id="LoaiPhongId" name="LoaiPhongId" value="@Model.DatPhong.Phong.Loai.Id" />
+
+            <div class="col">
+                <div class="dx-field-label">Loại phòng:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextBox().ID("LoaiId").Name("LoaiId")                                         
+                        .Value(Model.DatPhong.Phong.Loai.TenLoai)                        
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>        
+            <div class="col">
+                <div class="dx-field-label">Phòng:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().SelectBox().ID("PhongId").Name("PhongId")
+                        .DataSource(new JS("[]"))
+                        .DisplayExpr(new JS("phong_displayExpr"))
+                        .ValueExpr("Id")
+                        .Value(Model.DatPhong.Phong.Id)
+                        .Placeholder($"{Model.DatPhong.Phong.MaPhong} - {Model.DatPhong.Phong.TenPhong}")
+                        .OnValueChanged(@<text>
+                            function (e){
+                                var id = e.value;
+                                console.log("phong ", id);
+                                if(id){ 
+                                    LoadLoai(id); 
+                                }
+                            }
+                        </text>)
+                        )
+                </div>
+            </div>
+        </div>
+        <!-- Biểu tượng loading-->
+        <div id="loading" style="display: none;color: #007bff; margin-top:5px;">
+            &nbsp; <i class="fas fa-spinner"></i> Đang tải thông tin phòng ...
+        </div>
+
+        <div class="dx-field row">
+            <div class="col">
+                <div class="dx-field-label">Từ ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DateBox().ID("TuNgay").Name("TuNgay")
+                        .Type(DateBoxType.DateTime).DisplayFormat("dd/MM/yyyy HH:mm:ss")
+                        .Value(Model.DatPhong.TuNgay)
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>
+            <div class="col">
+                <div class="dx-field-label">Đến ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DateBox().ID("DenNgay").Name("DenNgay")
+                        .Type(DateBoxType.DateTime).DisplayFormat("dd/MM/yyyy HH:mm:ss")
+                        .Value(Model.DatPhong.DenNgay)
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="dx-field row">
+            <div class="col" style="display:flex;">
+                <div class="dx-field-label" style="width: 15%!important;">Nguyên ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().CheckBox().ID("AllDay").Name("AllDay")
+                        .Value(Model.DatPhong.AllDay)                                          
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>
+        </div>
+
+        <div class="dx-field row" style="margin-right: -15px !important; margin-left: -15px !important;">
+            <div class="col">
+                <div class="dx-field-label">Ghi chú:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().TextArea().ID("GhiChu").Name("GhiChu")
+                        .Height(100)
+                        .Value("Đã chỉnh sửa lịch sau khi không duyệt")
+                        .ReadOnly(true)
+                        )
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="dx-field">
+        @(Html.DevExtreme().Button()
+            .ID("btn")
+            .Icon("far fa-calendar-alt")
+            .Text("Cập nhật")
+            .Type(ButtonType.Success)
+            .UseSubmitBehavior(true)
+            )
+
+        @(Html.DevExtreme().Button()
+            .ID("btnHuy")
+            .Icon("fas fa-times")
+            .Text("Quay lại")
+            .Type(ButtonType.Normal)
+            .OnClick("function() { window.location.href = '/NhaKhach/DanhSachDeNghi'; }")
+            )
+    </div>
+
+</form>
+
+
+<script>
+    //Hiển trị người đặt
+    function nguoidat_displayExpr(item) {
+        if (!item) {
+            return "";
+        }
+        return item.Ho + " " + (item.TenDem == "null" || item.TenDem == null ? "" : item.TenDem) + " " + item.Ten + (item.TaiKhoan == null || item.TaiKhoan == "" ? "" : " (" + item.TaiKhoan[0].Email + ")");
+    }  
+
+    //Hiển thị phòng
+    function phong_displayExpr(item) {
+        if (!item) {
+            return "";
+        }
+        return item.MaPhong + " - " + item.TenPhong;
+    }
+
+    $(function () {
+        var startDate = '@Model.DatPhong.TuNgay.ToString("yyyy-MM-ddTHH:mm:ss")';
+        var endDate = '@Model.DatPhong.DenNgay.ToString("yyyy-MM-ddTHH:mm:ss")';
+        var allDay = '@Model.DatPhong.AllDay';
+        var id = '@Model.DatPhong.Id';
+
+        $.ajax({
+            type: "GET",
+            url: 'ChinhSuaLichDat?handler=CheckPhong',
+            data: {
+                start: startDate, 
+                end: endDate,
+                allDay: allDay,
+                idlich: id
+            },
+            success: function (data) {
+                var phongData = data;
+                var phong = $("#PhongId").dxSelectBox("instance");
+                phong.option("dataSource", phongData);
+                
+            },
+            error: function (error) {
+                console.log("Lỗi load phòng: ", error);
+            }
+        });
+    });
+
+ 
+    function LoadLoai(id) {
+      
+        $.ajax({
+            type: "GET",
+            url: 'ChinhSuaLichDat?handler=LoadLoaiPhong',
+            data: { phongId: id },
+            success: function (data) {              
+
+                var loai = $("#LoaiId").dxTextBox("instance");              
+                    loai.option("value", data.ten || null); 
+                    
+                $("#LoaiPhongId").val(data.id || "");
+            },
+            error: function (xhr, status, error) {
+                console.error("Lỗi:", error);
+            },
+        });
+    }
+
+    $("#form").on("submit", function (e) {
+        e.preventDefault();      
+
+        var malich = $("#Id").val();
+        var phong = $("#PhongId").dxSelectBox("instance").option("value");
+
+        console.log("phong ", phong);
+
+        $.ajax({
+            type: "POST",
+            url: 'ChinhSuaLichDat?handler=UpdateLich',
+            data: { idlich: malich, idphong: phong },
+            success: function (data) {
+                if (data.success) {
+                    DevExpress.ui.notify("Cập nhật lịch đặt thành công", "success", 2000);
+                    window.location.href = '/NhaKhach/DanhSachDeNghi';
+                } else {
+                    DevExpress.ui.notify("Cập nhật lịch đặt thất bại", "error", 2000);
+                }
+            },
+        });
+       
+     // cập nhạt ĐẶT PHòng:  trạng thái, tinh trạng , ghi chú, phòng / KHÁCH: trạng thái 
+    });
+
+
+   
+</script>

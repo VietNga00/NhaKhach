@@ -1,0 +1,378 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.TaoDeNghiModel
+@using TMSWeb_Core.Models
+
+@{
+    ViewData["Title"] = "Tạo đề nghị";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+<style>
+    .dx-field-label {
+        width: 100% !important;
+    }
+
+    .dx-field-value {
+        width: 100% !important;
+    }
+
+        .dx-field-value:not(.dx-widget) > .dx-button, .dx-field-value:not(.dx-widget) > .dx-checkbox, .dx-field-value:not(.dx-widget) > .dx-switch {
+            float: left;
+        }
+
+    .show-text {
+        border-bottom: 1px solid darkgrey;
+        background-color: #f0f2f5;
+        margin-bottom: 10px;
+        padding: 8px 5px;
+        height: 35px;
+        color: #355681;
+    }
+</style>
+
+
+@if(Model.DeNghi?.Id > 0)
+{
+    <h2 class="content-block titlePage">Chỉnh sửa đề nghị</h2>
+}
+else
+{
+   <h2 class="content-block titlePage">Tạo đề nghị</h2> 
+}
+
+
+<form id="form" method="post" enctype="multipart/form-data" style="margin-top:20px" >
+    @Html.AntiForgeryToken()
+    <!-- Thông tin đề nghị-->
+    <div class="dx-field" style="margin-bottom: 20px;">
+        <h4 class="show-text"><i class="fas fa-file-alt"></i> Thông tin đề nghị sắp phòng</h4>
+        <input type="hidden" id="DeNghiId" name="DeNghiId" value="@Model.DeNghi?.Id" />
+
+       <div class="dx-field row">
+           <div class="col">
+               <div class="dx-field-label">Người tạo:</div>
+               <div class="dx-field-value">
+                    @(Html.DevExtreme().SelectBox().ID("NguoiTaoId").Name("NguoiTaoId")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/Vienchucs").Expand("TaiKhoan")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(d => d.Filter(" ['ID', '=', " + Model.VienChucId + "] "))
+                        .ValueExpr("Id")
+                        .DisplayExpr(new JS("nguoidat_displayExpr"))
+                        .DataSourceOptions(d =>
+                        {
+                            d.Select(new string[] { "Id", "Ho", "TenDem", "Ten" });
+                            d.Paginate(true);
+                        })
+                        .Value((Model.DeNghi != null && Model.DeNghi.NguoiTaoId.HasValue) ? Model.DeNghi.NguoiTaoId : Model.VienChucId)                       
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        )
+               </div>
+           </div>
+           <div class="col">
+                <div class="dx-field-label">Đơn vị:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DropDownBox().ID("DonViId").Name("DonViId")
+                        .DataSource(d => d.OData().Version(4)
+                            .Url("https://tms.tvu.edu.vn:10220/api/DonVis").Expand("Parent")
+                            .Key("Id").BeforeSend("dvtm")
+                        )
+                        .DataSourceOptions(s => s.Filter("[['LoaiDonViId','<>',2585],'and',['LoaiDonViId','<>',2228],'and',['TrangThaiId','=',4]]"))
+                        .DisplayExpr("TenDonVi").ValueExpr("Id")
+                        .Value(Model.DeNghi != null ? Model.DeNghi.DonViId : null)
+                        .DeferRendering(true)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .ContentTemplate(new TemplateName("listDonVi"))                       
+                        )
+                </div>
+           </div>
+       </div>
+        <div class="dx-field row" style="margin-right: -15px !important; margin-left: -15px !important;">
+           <div class="col">
+               <div class="dx-field-label">Nội dung:</div>
+               <div class="dx-field-value">
+                   @(Html.DevExtreme().TextArea().ID("NoiDung").Name("NoiDung")
+                        .Height(100)
+                        .Value(Model.DeNghi != null ? Model.DeNghi.NoiDung : null)
+                        .ValidationMessageMode(ValidationMessageMode.Always)                                
+                   )
+               </div>
+           </div>         
+           <div class="col">
+               <div class="dx-field-label">Ghi chú:</div>
+               <div class="dx-field-value">
+                     @(Html.DevExtreme().TextArea().ID("GhiChu").Name("GhiChu")
+                        .Height(100)
+                       .Value(Model.DeNghi != null ? Model.DeNghi.GhiChu : null)    
+                       .ValidationMessageMode(ValidationMessageMode.Always)  
+                     )
+               </div>
+           </div>
+       </div>
+       <input type="hidden" id="HiddenSoLuongKhach" name="SoLuongKhach" />
+    </div>
+
+    <!-- Danh sách khách ở-->
+    <div class="dx-field" style="margin-bottom:30px;">
+        <h4 class="show-text"><i class="fas fa-user"></i>  Thông tin khách ở </h4>
+
+        <div class="dx-field">
+            @(Html.DevExtreme().Button()
+                .ID("btnThemKhach")
+                .Icon("fas fa-user-plus")
+                .Text("Thêm khách")
+                .Type(ButtonType.Default)
+                .Width("Auto")
+                .OnClick("onAddKhach")
+                )
+        </div>
+
+        <input type="hidden" id="HiddenDanhSachKhach" name="DanhSachKhach" />  <!-- Gán danh sách submit -->
+
+        <div class="dx-field" id="danhsachkhach"></div>
+
+    </div>
+
+    <div class="dx-field">
+        @(Html.DevExtreme().Button()
+            .ID("btntao")
+            .Text((Model.DeNghi != null && Model.DeNghi.Id > 0) ? "Cập nhật" : "Tạo đề nghị")
+            .Type(ButtonType.Success)
+            .UseSubmitBehavior(true)
+         )
+
+        @(Html.DevExtreme().Button()
+            .ID("btnhuy")           
+            .Text("Hủy")
+            .Type(ButtonType.Normal)
+            .OnClick("function() { window.location.href = '/NhaKhach/DanhSachDeNghi'; }")
+         )
+    </div>
+
+</form>
+
+<!-- Danh sách đơn vị -->
+@using (Html.DevExtreme().NamedTemplate("listDonVi"))
+{
+    @(Html.DevExtreme().DataGrid()
+            .ID("gridDonVi")
+            .DataSource(new JS(@"component.getDataSource()"))
+            .Columns(columns =>
+            {
+                columns.Add().DataField("TenDonVi").Caption("Tên đơn vị");
+                columns.Add().DataField("Parent.TenDonVi").Caption("Đơn vị cấp trên");
+            })
+            .HoverStateEnabled(true)
+            .FilterRow(f => f.Visible(true))
+            .ShowColumnHeaders(true)
+            .Height(300)
+            .Scrolling(s => s.Mode(GridScrollingMode.Infinite))
+            .Selection(s => s.Mode(SelectionMode.Single).ShowCheckBoxesMode(GridSelectionShowCheckBoxesMode.Always))
+            .SelectedRowKeys(new JS(@"component.option('value')"))
+            .OnSelectionChanged(@<text>
+                function (selectedItems){
+                    var keys = selectedItems.selectedRowKeys;
+                    var donvi = $("#DonViId").dxDropDownBox("instance");
+                        donvi.option("value", keys[0]);
+                        donvi.close();
+                }
+            </text>)
+        )
+}
+
+
+<script>
+    //Hiển trị người đặt
+    function nguoidat_displayExpr(item) {
+        if (!item) {
+            return "";
+        }
+        return item.Ho + " " + (item.TenDem == "null" || item.TenDem == null ? "" : item.TenDem) + " " + item.Ten + (item.TaiKhoan == null || item.TaiKhoan == "" ? "" : " (" + item.TaiKhoan[0].Email + ")");
+    }
+
+    var danhsachkhach = [];
+
+    //Thêm thông tin khách
+    function ListKhach() {
+        $("#danhsachkhach").empty();
+
+        danhsachkhach.forEach((khach, index) => {
+            var template =
+                `<div class="dx-field" style="display:flex; align-items:center;">
+                        <div class="col" style="font-weight:bold;font-size:15px;padding:0px;"> Thông tin khách ${index + 1}: </div>
+                        <input type="hidden" id="KhachId${index}" value="${khach.Id || ''}" />
+                        <div class="col" style="text-align: end;padding: 0px;">
+                            <button class="btn btn-danger btn-sm" onClick="onRemoveKhach(${index})">
+                                <i class="fas fa-trash"></i> Xóa khách
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dx-field" id="khach-${index}">
+                        <div class="dx-field row">
+                            <div class="col">
+                                <div class="dx-field-label" > Họ tên khách: </div>
+                                <div class="dx-field-value">
+                                    <div id="TenKhach${index}"></div>
+                                </div>
+                            </div>
+                             <div class="col">
+                                <div class="dx-field-label">Chức danh:</div>
+                                <div class="dx-field-value">
+                                    <div id="ChucDanh${index}"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dx-field row">
+                            <div class="col">
+                                <div class="dx-field-label">Số căn cước:</div>
+                                <div class="dx-field-value">
+                                    <div id="SoCccd${index}"></div>
+                                </div>
+                            </div>
+                             <div class="col">
+                                <div class="dx-field-label">Số điện thoại:</div>
+                                <div class="dx-field-value">
+                                    <div id="Sdt${index}"></div>
+                                </div>
+                            </div>                           
+                        </div>
+                        <div class="dx-field row" style="margin-right: -15px !important; margin-left: -15px !important;">
+                            <div class="col">
+                                <div class="dx-field-label">Giới tính:</div>
+                                <div class="dx-field-value">
+                                    <div id="GioiTinh${index}"></div>
+                                </div>
+                            </div>                           
+                        </div>
+
+                        <hr />
+                    `;
+            $("#danhsachkhach").append(template);
+
+            // Khởi tạo
+            $("#TenKhach" + index).dxTextBox({ value: khach.TenKhach, placeholder: "Nhập họ tên khách", onValueChanged: function (e) { danhsachkhach[index].TenKhach = e.value; } });
+            $("#SoCccd" + index).dxTextBox({ value: khach.SoCccd, placeholder: "Nhập số căn cước", onValueChanged: function (e) { danhsachkhach[index].SoCccd = e.value; } });
+            $("#ChucDanh" + index).dxTextBox({ value: khach.ChucDanh, placeholder: "Nhập chức danh", onValueChanged: function (e) { danhsachkhach[index].ChucDanh = e.value; } });
+            $("#Sdt" + index).dxTextBox({ value: khach.Sdt, placeholder: "Nhập số điện thoại", onValueChanged: function (e) { danhsachkhach[index].Sdt = e.value; } });
+            $("#GioiTinh" + index).dxRadioGroup({
+                dataSource: [{ Id: "Nam", Ten: "Nam" }, { Id: "Nữ", Ten: "Nữ" }], valueExpr: "Id", displayExpr: "Ten", layout: "horizontal",
+                value: khach.GioiTinh, onValueChanged: function (e) { danhsachkhach[index].GioiTinh = e.value; }
+            });           
+        });
+
+        $("#HiddenDanhSachKhach").val(JSON.stringify(danhsachkhach));  // Gán danh sách khách
+    }
+
+
+    //Thêm thông tin khách
+    function onAddKhach() {    
+        danhsachkhach.push({ TenKhach: "", SoCccd: "", ChucDanh: "", GioiTinh: "", Sdt: "" });
+        ListKhach();
+    }
+
+    //Xóa thông tin khách
+    function onRemoveKhach(index) {
+        danhsachkhach.splice(index, 1);
+        ListKhach();
+    }
+
+    //Mở trang
+    $(document).ready(function () {     
+        // danhsachkhach.push({ TenKhach: "", SoCccd: "", ChucDanh: "", GioiTinh: "", Sdt: "" });
+        // ListKhach();
+        // $("#btnThemKhach").off("click").on("click", onAddKhach);
+        var dsKhach = @Html.Raw(Json.Serialize(Model.DanhSachKhach ?? new List<TMS_ModelCore.Models.GhDanhSachKhach>()));
+        if (dsKhach.length > 0) {
+            danhsachkhach = dsKhach;
+        } else {
+            danhsachkhach.push({ TenKhach: "", SoCccd: "", ChucDanh: "", GioiTinh: "", Sdt: "" });
+        }
+        ListKhach();
+        $("#btnThemKhach").off("click").on("click", onAddKhach);
+
+    });
+
+
+    //Kiểm tra form
+    $(function () {     
+        $("#DonViId").dxValidator({ validationRules: [{ type: "required", message: "Vui lòng chọn đơn vị" }] });
+        $("#NoiDung").dxValidator({ validationRules: [{ type: "required", message: "Vui lòng nhập nội dung của đề nghị" }] }); 
+    });
+
+    //Kiểm tra danh sách khách
+    function validateKhach() {
+        for (let i = 0; i < danhsachkhach.length; i++) {
+            let khach = danhsachkhach[i];
+            if (!khach.TenKhach?.trim() || !khach.ChucDanh?.trim() || !khach.GioiTinh?.trim() ) {
+                DevExpress.ui.notify("Vui lòng nhập đủ thông tin Tên, Chức danh,... của khách!", "warning", 3000);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    //Submit
+    $("#form").on("submit", function (e) {
+        e.preventDefault();
+        if (!validateKhach()) {
+            return false;
+        }
+        $("#HiddenDanhSachKhach").val(JSON.stringify(danhsachkhach));
+        $("#HiddenSoLuongKhach").val(danhsachkhach.length);
+
+        var formData = $(this).serialize();
+        console.log("form ", formData);
+
+        var denghiId = $("#DeNghiId").val();
+
+        if (denghiId && parseInt(denghiId) > 0) {
+            //Cập nhật
+           
+            $.ajax({
+                type: "POST",
+                url: 'TaoDeNghi?handler=UpdateDeNghi',
+                data: formData,
+                success: function (data) {
+                    if (data.success) {
+                        DevExpress.ui.notify("Cập nhật đề nghị thành công", "success", 3000);
+
+                        setTimeout(function () {
+                            window.location.href = '/NhaKhach/DanhSachDeNghi';
+                        }, 1000);
+                    } else {
+                        DevExpress.ui.notify(data.message, "error", 3000);
+                    }
+                },
+                error: function () {
+                    DevExpress.ui.notify("Có lỗi trong quá trình cập nhật đề nghị", "error", 3000);
+                }
+            });
+
+        } else {
+            //Tạo mới
+         
+            $.ajax({
+                type: "POST",
+                url: window.location.pathname,
+                data: formData,
+                success: function (data) {
+                    if (data.success) {
+                        DevExpress.ui.notify("Tạo đề nghị thành công", "success", 3000);
+
+                        setTimeout(function () {
+                            window.location.href = '/NhaKhach/DanhSachDeNghi';
+                        }, 1000);
+                    } else {
+                        DevExpress.ui.notify(data.message, "error", 3000);
+                    }
+                },
+                error: function () {
+                    DevExpress.ui.notify("Có lỗi trong quá trình tạo đề nghị", "error", 3000);
+                }
+            });
+        }      
+    });
+
+
+</script>

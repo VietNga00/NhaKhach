@@ -1,0 +1,30 @@
+﻿@page
+@model TMSWeb_Core.Pages.NhaKhach.IndexModel
+
+
+@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
+}
+
+
+@* @if (("nhukhanhtv052@gmail.com").Contains(User.FindFirst("Email").Value))  *@
+@* @if ((email == "nvvnga1103@gmail.com")) *@
+
+
+
+<!--
+    * Trạng thái của Loại Phòng/ Phòng: 
+            false/ 0 - Đang hoạt động 
+            true/ 1 - Tạm khóa
+
+    * Trạng thái của Đặt phòng: 
+            false/ 0 - Lịch vẫn hoạt động
+            true/ 1 - Lịch quá hạn ngày đặt nhưng chưa hoàn thành
+
+    * Trạng thái của Danh sách khách: 
+            null - Chưa có lịch
+            0 - Chờ duyệt lịch
+            1 - Lịch đã duyệt
+            2 - Từ chối lịch
+-->
