@@ -40,7 +40,7 @@
     .Columns(columns => 
     {
         columns.Add().Caption(" ").CellTemplate(new JS("SoThuTu"));
-        columns.AddFor(m => m.MaPhong).Caption("Mã Phòng");
+        columns.AddFor(m => m.MaPhong).Caption("Mã Phòng").Name("MaPhong");
         columns.AddFor(m => m.TenPhong).Caption("Tên Phòng");
         columns.AddFor(m => m.ToaNhaId).Caption("Tòa nhà").Lookup(lookup => lookup
            .DataSource(d => d.OData().Version(4)
@@ -81,7 +81,7 @@
     })
     .Summary(s => s.TotalItems(items =>
         {
-            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).DisplayFormat("Tổng: {0} phòng");
+            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("MaPhong").DisplayFormat("Tổng: {0} phòng");
         })
     )
     .Editing(e => e
@@ -100,7 +100,7 @@
             )
         )
         .Form(f => f.ID("form").ColCount(2).Items(items => {
-            items.AddSimpleFor(m => m.MaPhong).IsRequired(true);
+            items.AddSimpleFor(m => m.MaPhong).IsRequired(true).HelpText("Vd: A11.111,...");
             items.AddSimpleFor(m => m.TenPhong).IsRequired(true);
             items.AddSimpleFor(m => m.LoaiId).IsRequired(true);
             items.AddSimpleFor(m => m.ToaNhaId).IsRequired(true);
@@ -127,6 +127,10 @@
     function SoThuTu(container, e) {
         var index = e.component.pageIndex() * e.component.pageSize() + e.rowIndex + 1;
         container.text(index);
+    }
+
+    function getLoadPanelInstance() {
+        return $("#loadpanel").dxLoadPanel("instance");
     }
 
     function validateRow(e) {

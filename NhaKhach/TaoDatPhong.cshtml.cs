@@ -1,4 +1,5 @@
-﻿using DocumentFormat.OpenXml.Bibliography;
+﻿using Abp.Extensions;
+using DocumentFormat.OpenXml.Bibliography;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,33 +52,76 @@ namespace TMSWeb_Core.Pages.NhaKhach
         [BindProperty(Name = "phong", SupportsGet = true)]
         public int phongID { get; set; }
         public int loaiID { get; set; }
-        
+
+        public bool IsEdit => DatPhong != null && DatPhong.Id > 0;
+        public bool isAdmin { get; set; }
 
 
-        public async Task<IActionResult> OnGetAsync()
-        {
+
+
+        public async Task<IActionResult> OnGetAsync(int? datphongID)
+        {          
             var accessToken = common.RefreshAccessToken(HttpContext);
-            string url = Request.Path;
-            string email = User.FindFirst("Email").Value;
+             var email = User.FindFirst("Email").Value;
+          
             var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
             var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
-            this.VienChucId = taikhoan.VienChucId;                     
+            this.VienChucId = taikhoan.VienChucId;
 
-            if ( phongID > 0)
-            {
-                loaiID = _dbContext.GhPhong.Where(p => p.Id == phongID).Select(p => p.LoaiId).FirstOrDefault();
+            // Kiểm tra quyền
+            List<string> dsAdmin = new List<string> { "nvvnga1103@gmail.com" }; 
+            this.isAdmin = dsAdmin.Contains(email.ToLower());
+            
+
+            // Nếu là chỉnh sửa
+            if (datphongID.HasValue)
+            {              
+                DatPhong = await client.For<GhDatPhong>().Key(datphongID.Value).FindEntryAsync();
+                if (DatPhong == null)
+                {
+                    return NotFound();
+                }
+
+                bool isNguoiTao = (DatPhong.NguoiDatId == taikhoan.VienChucId);
+                if (!isAdmin && !isNguoiTao)
+                {
+                    return RedirectToPage("NhaKhach/AccessDeny");
+                }
+
+                this.denghiID = DatPhong.DeNghiId ?? 0;
+                this.phongID = DatPhong.PhongId ?? 0;
+                this.khachID = DatPhong.KhachId ?? 0;                
+                this.loaiID = _dbContext.GhPhong.Where(p => p.Id == phongID).Select(p => p.LoaiId).FirstOrDefault();
+                this.donviID = _dbContext.GhDeNghi.Where(p => p.Id == denghiID).Select(p => p.DonViId ?? 0).FirstOrDefault();
+               
+                DanhSachKhach = _dbContext.GhDanhSachKhach.Where(p => p.DeNghiId == denghiID && (p.TrangThai == null || p.Id == DatPhong.KhachId) ).ToList();               
             }
-          
-            if(denghiID > 0)
+            else
             {
-                donviID = (int)_dbContext.GhDeNghi.Where(p => p.Id == denghiID).Select(p => p.DonViId).FirstOrDefault();
+                // Nếu là tạo mới
+                DatPhong = new GhDatPhong
+                {
+                    NguoiDatId = taikhoan.VienChucId,
+                    AllDay = false
+                };
+            
+                if (phongID > 0)
+                {
+                    this.loaiID = _dbContext.GhPhong.Where(p => p.Id == phongID).Select(p => p.LoaiId).FirstOrDefault();
+                }
 
-                var colich = _dbContext.GhDatPhong.Where(p => p.DeNghiId == denghiID).Select(p => p.KhachId).Distinct().ToList();
-                DanhSachKhach = _dbContext.GhDanhSachKhach.Where(p => p.DeNghiId == denghiID && !colich.Contains(p.Id)).ToList();
+                if (denghiID > 0)
+                {                    
+                    this.donviID = _dbContext.GhDeNghi.Where(p => p.Id == denghiID).Select(p => p.DonViId ?? 0).FirstOrDefault();
+
+                    var colich = _dbContext.GhDatPhong.Where(p => p.DeNghiId == denghiID).Select(p => p.KhachId).Distinct().ToList();
+                    DanhSachKhach = _dbContext.GhDanhSachKhach.Where(p => p.DeNghiId == denghiID && !colich.Contains(p.Id)).ToList();
+                    
+                }
             }
-
             return Page();
         }
+
 
         //Load phòng
         public IActionResult OnGetLoadPhongByLoai(int loaiId)
@@ -118,6 +162,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
         }
 
 
+        //Tạo mới đặt phòng
         public async Task<IActionResult> OnPostAsync()
         {
             var accessToken = common.RefreshAccessToken(HttpContext);
@@ -128,7 +173,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
            
             //Kiểm tra trùng lịch
             var isBooking = await _dbContext.GhDatPhong.Where(d => d.PhongId == DatPhong.PhongId
-                            &&  (d.TinhTrangId == 1 || d.TinhTrangId == 2 || d.TinhTrangId == 3 ) //Đã đặt - Đã nhận phòng - Hoàn Thành
+                            &&  (d.TinhTrangId == 4 || d.TinhTrangId == 5 || d.TinhTrangId == 6 ) //Đã đặt - Đã nhận phòng - Hoàn Thành
                             && ((DatPhong.TuNgay >= d.TuNgay && DatPhong.TuNgay < d.DenNgay) || (DatPhong.DenNgay > d.TuNgay && DatPhong.DenNgay <= d.DenNgay) || (DatPhong.TuNgay <= d.TuNgay && DatPhong.DenNgay >= d.DenNgay) )
                             ).FirstOrDefaultAsync();
           
@@ -142,13 +187,12 @@ namespace TMSWeb_Core.Pages.NhaKhach
             DatPhong.TuNgay = Convert.ToDateTime(Request.Form["TuNgay"]);
             DatPhong.DenNgay = Convert.ToDateTime(Request.Form["DenNgay"]);
             DatPhong.AllDay = Convert.ToBoolean(Request.Form["AllDay"]);                       
-            DatPhong.PhongId = Convert.ToInt32(Request.Form["PhongId"]);
-            DatPhong.NguoiDatId = Convert.ToInt32(Request.Form["NguoiDatId"]);
+            DatPhong.PhongId = Convert.ToInt32(Request.Form["PhongId"]);           
             DatPhong.GhiChu = Request.Form["GhiChu"].ToString();
-            DatPhong.TinhTrangId = 5; //Chờ duyệt lịch
+            DatPhong.TinhTrangId = 2; //Chờ duyệt lịch
             DatPhong.TrangThai = false;
-            DatPhong.NgayTao = DateTime.Now;
-            DatPhong.NguoiThucHienId = (int)VienChucId;
+            DatPhong.NguoiDatId = Convert.ToInt32(Request.Form["NguoiDatId"]);
+            DatPhong.NgayTao = DateTime.Now;            
 
             _dbContext.GhDatPhong.Add(DatPhong);
 
@@ -156,14 +200,15 @@ namespace TMSWeb_Core.Pages.NhaKhach
             DanhSachKhach = _dbContext.GhDanhSachKhach.Where(d => d.Id == DatPhong.KhachId).ToList();
             if (DanhSachKhach.Any())
             {
-                DanhSachKhach[0].TrangThai = 0;  //Chờ duyệt lịch
+                DanhSachKhach[0].TrangThai = 0;  //Chờ duyệt lịch               
+
                 _dbContext.GhDanhSachKhach.Update(DanhSachKhach[0]);
             }
             //Cập nhật tình trạng đề nghị
             DeNghi = _dbContext.GhDeNghi.Where(d => d.Id == DatPhong.DeNghiId).FirstOrDefault();
             if (DeNghi != null)
             {
-                DeNghi.TinhTrangId = 5;  //Chờ duyệt lịch
+                DeNghi.TinhTrangId = 2;  //Chờ duyệt lịch
                 _dbContext.GhDeNghi.Update(DeNghi);
             }
             await _dbContext.SaveChangesAsync();
@@ -171,6 +216,47 @@ namespace TMSWeb_Core.Pages.NhaKhach
             var lichid = common.EncryptString("b14ca54545451215451FSDFSEVDa1916", DatPhong.Id.ToString());
 
             return new JsonResult(new { success = true, id = lichid });
+        }
+
+
+        //Chỉnh sửa đặt phòng
+        public async Task<IActionResult> OnPostEditLichAsync()
+        {
+            var accessToken = common.RefreshAccessToken(HttpContext);
+            string email = User.FindFirst("Email").Value;
+            var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
+            var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
+            this.VienChucId = taikhoan.VienChucId;
+
+            var form = await Request.ReadFormAsync();
+            var id = Convert.ToInt32(form["DatPhongId"]);
+
+            DatPhong = await _dbContext.GhDatPhong.FindAsync(id);
+            if (DatPhong == null)
+            {
+                return new JsonResult(new { success = false, message = "Không tìm thấy lịch đặt" });
+            }
+
+            //Kiểm tra trùng lịch
+            bool kiemtra = _dbContext.GhDatPhong.Any(d => d.PhongId == DatPhong.PhongId && d.Id != DatPhong.Id && (d.TinhTrangId == 4 || d.TinhTrangId == 5) && !(DatPhong.DenNgay <= d.TuNgay || DatPhong.TuNgay >= d.DenNgay));           
+            if (kiemtra)
+            {
+                return new JsonResult(new { success = false, message = "Thời gian mới bị trùng với lịch đặt khác!" });
+            }
+
+            //Lưu thông tin đặt phòng                   
+            DatPhong.TuNgay = Convert.ToDateTime(Request.Form["TuNgay"]);
+            DatPhong.DenNgay = Convert.ToDateTime(Request.Form["DenNgay"]);
+            DatPhong.AllDay = Convert.ToBoolean(Request.Form["AllDay"]);
+            DatPhong.PhongId = Convert.ToInt32(Request.Form["PhongId"]);         
+            DatPhong.GhiChu = Request.Form["GhiChu"].ToString();                
+            DatPhong.NguoiThucHienId = (int)VienChucId;
+            DatPhong.NgayCapNhat = DateTime.Now;
+
+            _dbContext.GhDatPhong.Update(DatPhong);
+            await _dbContext.SaveChangesAsync();
+           
+            return new JsonResult(new { success = true });
         }
 
 

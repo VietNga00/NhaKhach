@@ -27,6 +27,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             var accessToken = common.RefreshAccessToken(HttpContext);
 
             string email = User.FindFirst("Email").Value;
+            
             var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
             var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
             this.VienChucId = taikhoan.VienChucId;
@@ -45,7 +46,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             this.VienChucId = taikhoan.VienChucId;
 
             //Người quản trị
-            var dsAdmin = new List<string>{ "nvvnga1103@gmail.com", };  // nhukhanhtv052@gmail.com / nvvnga1103@gmail.com
+            var dsAdmin = new List<string>{ "nvvnga1103@gmail.com", };  
 
             DatPhong = await client.For<GhDatPhong>().Filter(f => f.Id == lichId).FindEntryAsync();
             if (DatPhong != null)
@@ -68,11 +69,14 @@ namespace TMSWeb_Core.Pages.NhaKhach
             using (var db = new TMS_CoreContext())
             {
                 var now = DateTime.Now;
-                var lich = db.GhDatPhong.Where(d => (d.TinhTrangId == 1 || d.TinhTrangId == 2) && d.DenNgay < now).ToList(); //Đã đặt - Đã nhận phòng
-                foreach (var ds in lich)
+                var lichquahan = db.GhDatPhong.Where(d => (d.TinhTrangId == 4 || d.TinhTrangId == 5) && d.DenNgay < now).ToList(); //Đã duyệt - Đã nhận phòng
+                var lichkhongnhan = db.GhDatPhong.Where(d => d.TinhTrangId == 4 && d.TuNgay < now.Date && d.TinhTrangId != 5).ToList();
+
+                var tonghop = lichquahan.Union(lichkhongnhan).Distinct().ToList();
+
+                foreach (var ds in tonghop)
                 {
-                    ds.TrangThai = true;
-                    db.GhDatPhong.Update(ds);
+                    ds.TrangThai = true;                   
                 }
                 await db.SaveChangesAsync();
             }

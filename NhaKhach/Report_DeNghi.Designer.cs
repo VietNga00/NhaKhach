@@ -511,6 +511,8 @@
             // 
             this.DetailReport2.Bands.AddRange(new DevExpress.XtraReports.UI.Band[] {
             this.Detail3});
+            this.DetailReport2.DataMember = "GH_DeNghi_NoiDung";
+            this.DetailReport2.DataSource = this.sqlDataSource1;
             this.DetailReport2.Level = 2;
             this.DetailReport2.Name = "DetailReport2";
             // 
@@ -524,12 +526,12 @@
             // 
             // xrTable3
             // 
-            this.xrTable3.LocationFloat = new DevExpress.Utils.PointFloat(49.87721F, 73.18519F);
+            this.xrTable3.LocationFloat = new DevExpress.Utils.PointFloat(25.31579F, 73.18519F);
             this.xrTable3.Name = "xrTable3";
             this.xrTable3.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 0, 96F);
             this.xrTable3.Rows.AddRange(new DevExpress.XtraReports.UI.XRTableRow[] {
             this.xrTableRow3});
-            this.xrTable3.SizeF = new System.Drawing.SizeF(671.2108F, 50.98043F);
+            this.xrTable3.SizeF = new System.Drawing.SizeF(719.8636F, 50.98043F);
             this.xrTable3.StylePriority.UseTextAlignment = false;
             this.xrTable3.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
             // 
@@ -549,7 +551,7 @@
             this.xrTableCell13.Name = "xrTableCell13";
             this.xrTableCell13.StylePriority.UseFont = false;
             this.xrTableCell13.Text = "BAN GIÁM HIỆU";
-            this.xrTableCell13.Weight = 1.0271126452546016D;
+            this.xrTableCell13.Weight = 0.93397714356552974D;
             // 
             // xrTableCell14
             // 
@@ -558,16 +560,18 @@
             this.xrTableCell14.Name = "xrTableCell14";
             this.xrTableCell14.StylePriority.UseFont = false;
             this.xrTableCell14.Text = "PHÒNG A";
-            this.xrTableCell14.Weight = 1.052894572295465D;
+            this.xrTableCell14.Weight = 0.92354383725479716D;
             // 
             // xrTableCell15
             // 
+            this.xrTableCell15.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "Upper([TenDonVi])")});
             this.xrTableCell15.Font = new DevExpress.Drawing.DXFont("Times New Roman", 13F, DevExpress.Drawing.DXFontStyle.Bold);
             this.xrTableCell15.Multiline = true;
             this.xrTableCell15.Name = "xrTableCell15";
             this.xrTableCell15.StylePriority.UseFont = false;
             this.xrTableCell15.Text = "ĐƠN VỊ";
-            this.xrTableCell15.Weight = 1.0132212522252473D;
+            this.xrTableCell15.Weight = 1.4599204785522339D;
             // 
             // xrLabel12
             // 

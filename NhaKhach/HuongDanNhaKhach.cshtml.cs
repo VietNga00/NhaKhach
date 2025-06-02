@@ -3,12 +3,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
-    public class ThongTinNhaKhachModel : PageModel
+    public class HuongDanNhaKhachModel : PageModel
     {
         public void OnGet()
         {
-            string email = "nhukhanhtv052@gmail.com";
-
         }
     }
 }

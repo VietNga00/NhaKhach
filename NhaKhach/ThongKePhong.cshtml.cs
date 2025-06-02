@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using TMS_ModelCore.Models;
@@ -12,7 +14,7 @@ using TMSWeb_Core.Models;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
-    [Authorize(Roles = "Users,Administrators")]
+    [Authorize(Roles = "Administrators")]
     [IgnoreAntiforgeryToken]
     public class ThongKePhongModel : PageModel
     {
@@ -62,13 +64,15 @@ namespace TMSWeb_Core.Pages.NhaKhach
             string email = User.FindFirst("Email").Value;
             if (!(await common.checkRoleAsync(email, url, "Create", HttpContext.GetTokenAsync("access_token").Result)))
             {
-                return new RedirectToPageResult("QuanLyNhaKhach/AccessDeny");
+                return new RedirectToPageResult("NhaKhach/AccessDeny");
             }
             await LoadDanhSachNam();
             await LoadDanhSachPhong();
 
             namchon = namhientai;
             thangchon = thanghientai;
+
+            await CapNhatThongKe(namchon, thangchon);
 
             await XuLyThongKe(namchon, thangchon);            
 
@@ -105,7 +109,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 }
                 else
                 {
-                    if (thongke.Any(t => t.SoLichDat > 0))
+                    if (thongke.Any(t => t.TongSoLich > 0))
                     {
                         await _dbContext.GhThongKePhong.AddRangeAsync(thongke);
                         await _dbContext.SaveChangesAsync();
@@ -122,21 +126,57 @@ namespace TMSWeb_Core.Pages.NhaKhach
         //Tính toán thống kê
         private async Task<List<GhThongKePhong>> LayThongKe(int nam, int thang)
         {
-            var thongkephong = await _dbContext.GhDatPhong.Where(x => x.TuNgay.Year == nam && x.TuNgay.Month == thang).GroupBy(x => new {x.PhongId})
+            var thongkephong = await _dbContext.GhDatPhong.Where(x => x.TuNgay.Year == nam && x.TuNgay.Month == thang).GroupBy(x => new { x.PhongId })
                 .Select(g => new GhThongKePhong
                 {
                     Nam = nam,
                     Thang = thang,
                     PhongId = (int)g.Key.PhongId,
-                    SoLichDat = g.Count(),
-                    SoLichHuy = g.Count(x => x.TinhTrangId == 4 && x.NgayHuy.HasValue && x.NgayHuy.Value.Year == nam && x.NgayHuy.Value.Month == thang),
-                    SoLichQuaHan = g.Count(x => x.TrangThai == true),
+                    TongSoLich = g.Count(),
+                    LichHopLe = g.Count(x => x.TinhTrangId != 2 && x.TinhTrangId != 3 && x.TinhTrangId != 7 && x.TrangThai != true), //Chờ duyệt - Không duyệt - Đã hủy - Quá hạn
+                    LichHuy = g.Count(x => x.TinhTrangId == 7 && x.NgayHuy.HasValue && x.NgayHuy.Value.Year == nam && x.NgayHuy.Value.Month == thang),
+                    LichQuaHan = g.Count(x => x.TrangThai == true),                    
                     NgayThongKe = DateTime.Now,
 
                 }).ToListAsync();
+
+            //Debug.WriteLine(JsonConvert.SerializeObject(thongkephong));
+
             return thongkephong;
         }
 
-       
+
+        private async Task CapNhatThongKe(int nam, int thang)
+        {
+            for (int i = 1; i < thang; i++)
+            {
+                var thongkemoi = await LayThongKe(nam, i);
+                if (!thongkemoi.Any(t => t.TongSoLich > 0)) continue;
+
+                foreach (var item in thongkemoi)
+                {
+
+                    var dulieu = await _dbContext.GhThongKePhong.FirstOrDefaultAsync(x => x.Nam == nam  && x.Thang == i && x.PhongId == item.PhongId );
+                    if (dulieu == null)
+                    {
+                        await _dbContext.GhThongKePhong.AddAsync(item);
+                    } else
+                    {
+                        if(dulieu.TongSoLich != item.TongSoLich || dulieu.LichHopLe != item.LichHopLe || dulieu.LichHuy != item.LichHuy || dulieu.LichQuaHan != item.LichQuaHan)
+                        {
+                            dulieu.TongSoLich = item.TongSoLich;
+                            dulieu.LichHopLe = item.LichHopLe;
+                            dulieu.LichHuy = item.LichHuy;
+                            dulieu.LichQuaHan = item.LichQuaHan;
+                            dulieu.NgayThongKe = DateTime.Now;
+
+                            _dbContext.GhThongKePhong.Update(dulieu);
+                        }
+                    }
+                }               
+            }
+            await _dbContext.SaveChangesAsync();
+        }
+
     }
 }

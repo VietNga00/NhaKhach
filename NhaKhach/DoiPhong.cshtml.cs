@@ -4,21 +4,21 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json;
 using Simple.OData.Client;
-using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
+using System;
 using TMS_ModelCore.Models;
 using TMSWeb_Core.Models;
+using System.Linq;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
     [Authorize(Roles = "Users,Administrators")]
     [IgnoreAntiforgeryToken]
-    public class ChinhSuaLichDatModel : PageModel
+    public class DoiPhongModel : PageModel
     {
         private readonly TMS_CoreContext _dbContext;
-        public ChinhSuaLichDatModel(TMS_CoreContext dbContext)
+        public DoiPhongModel(TMS_CoreContext dbContext)
         {
             _dbContext = dbContext;
         }
@@ -36,39 +36,39 @@ namespace TMSWeb_Core.Pages.NhaKhach
         {
             var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
 
-            if(lich == null)
+            if (lich == null)
             {
                 return NotFound();
             }
-            this.idlich = lich;      
+            this.idlich = lich;
 
-            this.DatPhong = await client.For<GhDatPhong>().Filter(f => f.Id == this.idlich).Expand("DeNghi($expand=DonVi)", "Phong", "Phong($expand=Loai)", "Khach").FindEntryAsync();      
-           
+            this.DatPhong = await client.For<GhDatPhong>().Filter(f => f.Id == this.idlich).Expand("DeNghi($expand=DonVi)", "Phong", "Phong($expand=Loai)", "Khach").FindEntryAsync();
+
             return Page();
         }
 
         //Load danh sách phòng trống
         public async Task<IActionResult> OnGetCheckPhong(DateTime start, DateTime end, bool allDay, int idlich)
         {
-            
+
             var accessToken = common.RefreshAccessToken(HttpContext);
             var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
 
-            var dsLich = await client.For<GhDatPhong>().FindEntriesAsync();  Debug.WriteLine(JsonConvert.SerializeObject(dsLich));
+            var dsLich = await client.For<GhDatPhong>().FindEntriesAsync(); Debug.WriteLine(JsonConvert.SerializeObject(dsLich));
             var dsPhong = await client.For<GhPhong>().FindEntriesAsync();
 
-            var lichcungngay = dsLich.Where(l => l.Id != idlich && (l.TinhTrangId == 1 || l.TinhTrangId == 2 ) && (l.TuNgay.Date <= end.Date && l.DenNgay.Date >= start.Date )).ToList();
+            var lichcungngay = dsLich.Where(l => l.Id != idlich && (l.TinhTrangId == 4 || l.TinhTrangId == 5) && (l.TuNgay.Date <= end.Date && l.DenNgay.Date >= start.Date)).ToList();
             //Debug.WriteLine(JsonConvert.SerializeObject(lichcungngay));
 
-            var phongcolich = lichcungngay.Where(l => l.AllDay == true || !(l.DenNgay <= start || l.TuNgay >= end ) ).Select(l => l.PhongId).Where(id => id.HasValue).Distinct().ToList();
-          
+            var phongcolich = lichcungngay.Where(l => l.AllDay == true || !(l.DenNgay <= start || l.TuNgay >= end)).Select(l => l.PhongId).Where(id => id.HasValue).Distinct().ToList();
+
             var dstrong = dsPhong.Where(p => !phongcolich.Contains(p.Id)).Select(p => new
             {
                 p.Id,
                 p.MaPhong,
                 p.TenPhong
             }).ToList();
-          
+
             var json = JsonConvert.SerializeObject(dstrong, Formatting.Indented);
             return Content(json, "application/json");
         }
@@ -77,9 +77,10 @@ namespace TMSWeb_Core.Pages.NhaKhach
         public IActionResult OnGetLoadLoaiPhong(int phongId)
         {
             var LoadLoai = _dbContext.GhPhong.Where(s => s.Id == phongId)
-                .Select(s => new {
+                .Select(s => new
+                {
                     id = s.LoaiId,
-                    ten = s.Loai.TenLoai,                   
+                    ten = s.Loai.TenLoai,
                 }).FirstOrDefault();
             return new JsonResult(LoadLoai);
         }
@@ -93,7 +94,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             }
 
             lich.PhongId = idphong;
-            lich.TinhTrangId = 1; //Đã đặt
+            lich.TinhTrangId = 4; //Đã đặt
             lich.TrangThai = false; //Lịch còn hoạt động
             lich.GhiChu += $" - (Đã chuyển phòng)";
             //lich.NgayCapNhat = DateTime.Now;
@@ -105,8 +106,10 @@ namespace TMSWeb_Core.Pages.NhaKhach
             _dbContext.GhDanhSachKhach.Update(khach);
 
             await _dbContext.SaveChangesAsync();
-            return new JsonResult(new { success = true});
+            return new JsonResult(new { success = true });
         }
+
+
 
     }
 }

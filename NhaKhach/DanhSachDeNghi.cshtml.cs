@@ -15,7 +15,7 @@ using TMSWeb_Core.Models;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
-    [Authorize(Roles = "Users,Administrators")]
+    [Authorize(Roles = "Administrators")]
     [IgnoreAntiforgeryToken]
     public class DanhSachDeNghiModel : PageModel
     {
@@ -27,6 +27,8 @@ namespace TMSWeb_Core.Pages.NhaKhach
 
         public GhDatPhong DatPhong { get; set; }
         public GhDeNghi DeNghi { get; set; }
+
+        public List<GhDanhSachKhach> DanhSachKhach { get; set; } = new();
 
         public int? VienChucId = 0;
 
@@ -58,7 +60,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 bool ischeck = dskhach.Count() == solich;
                 if(isStatus && ischeck)
                 {
-                    dn.TinhTrangId = 8; //Hoàn tất
+                    dn.TinhTrangId = 6; //Hoàn thành
                 }               
             }
              _dbContext.SaveChanges();
@@ -79,11 +81,20 @@ namespace TMSWeb_Core.Pages.NhaKhach
             DeNghi = await client.For<GhDeNghi>().Filter(f => f.Id == id).FindEntryAsync();
             if (DeNghi != null)
             {
-                DeNghi.TinhTrangId = 4; //Đã hủy             
-                //DeNghi.NgayHuy = DateTime.Now;
-                //DeNghi.NguoiHuyId = (int)VienChucId;
-
+                DeNghi.TinhTrangId = 7; //Đã hủy                            
                 _dbContext.GhDeNghi.Update(DeNghi);
+
+                // Cập nhật trạng thái khách
+                DanhSachKhach = _dbContext.GhDanhSachKhach.Where(d => d.DeNghiId == DeNghi.Id).ToList();
+                if (DanhSachKhach.Any())
+                {
+                    foreach (var khach in DanhSachKhach)
+                    {
+                        khach.TrangThai = 3; // Hủy
+                        khach.IsCancel = true; // Đề nghị đã hủy
+                        _dbContext.GhDanhSachKhach.Update(khach);
+                    }
+                }
                 _dbContext.SaveChanges();
                 return new JsonResult(new { success = true });
             }

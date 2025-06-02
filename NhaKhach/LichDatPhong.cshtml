@@ -7,6 +7,7 @@
     Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
 }
 
+
 <style>
     .color {
         display: flex;
@@ -67,7 +68,7 @@
     <div class="dx-field-label col-6" style="padding:0px;">
         <span><b>Trạng thái lịch đặt:</b> </span>
         <div class="color">
-            <div class="color-cell" style="background-color: #b30000;"></div> <span class="color-sp"> Đã đặt</span>
+            <div class="color-cell" style="background-color: #b30000;"></div> <span class="color-sp"> Đã duyệt</span>
             <div class="color-cell" style="background-color: #ffa500;"></div> <span class="color-sp"> Đã nhận phòng</span>
             <div class="color-cell" style="background-color: #009900;"></div> <span class="color-sp"> Hoàn thành</span>
             <div class="color-cell" style="background-color: #808080;"></div> <span class="color-sp"> Đã hủy</span>
@@ -119,7 +120,7 @@
         .Url("https://tms.tvu.edu.vn:10220/api/GhDatPhongs").Expand("Phong", "Phong.Loai", "TinhTrang", "NguoiThucHien", "NguoiDat")
         .Key("Id").BeforeSend("dvtm")
     )    
-    .DataSourceOptions(s => s.Filter(" [ ['Phong.TrangThai', '=', false], 'and', ['TinhTrangId', '<>', 5], 'and', ['TinhTrangId', '<>', 6] ] "))
+    .DataSourceOptions(s => s.Filter(" [ ['Phong.TrangThai', '=', false], 'and', ['TinhTrangId', '<>', 2], 'and', ['TinhTrangId', '<>', 3] ] "))
     .Views(views =>
     {
         views.Add().Type(SchedulerViewType.Day);
@@ -155,9 +156,9 @@
         <div class="show-appointment">
             <div> <%- targetedAppointmentData.Phong.MaPhong %> - <%- targetedAppointmentData.Id %> </div>           
         </div>
-    </text>)
-    .AppointmentTooltipTemplate(@<text>
-       <div class="show-tooltip">           
+    </text>)   
+    .AppointmentTooltipTemplate(@<text> 
+        <div class="show-tooltip">           
             <div class="tooltip-text">
             <div class="tooltip-title">Lịch: <%- targetedAppointmentData.Id %> - <%- targetedAppointmentData.Phong.MaPhong %> - <%- targetedAppointmentData.Phong.Loai.TenLoai %> </div>
                 <div>Người đặt:<%- targetedAppointmentData.NguoiDat.FullName %> </div>                        
@@ -178,11 +179,8 @@
                     <% } else { %>
                         <%- tu.toLocaleDateString() %> - <%- den.toLocaleDateString() %> ( <%- formatTime(tu) %> - <%- formatTime(den) %> )
                     <% } %>
-
                 </div>               
-
             </div>
-
         </div>
     </text>)
     .AppointmentDragging(d => d.OnDragStart(@<text> function(e){ e.cancel =  true; } </text>))
@@ -209,10 +207,10 @@
     //Màu sắc lịch
     function AppointmentRendered(e) {
         const statusColors = {
-            1: " #b30000",    // Đã đặt
-            2: " #ffa500",  // Đã nhận phòng
-            3: " #009900",   // Hoàn thành
-            4: " #808080", // Đã hủy
+            4: " #b30000",    // Đã duyệt
+            5: " #ffa500",  // Đã nhận phòng
+            6: " #009900",   // Hoàn thành
+            7: " #808080", // Đã hủy
         };
 
         let color = e.appointmentData.TrangThai === true ? "#b8b894" : (statusColors[e.appointmentData.TinhTrangId] || "blue");
@@ -253,7 +251,7 @@
     }
 
     function ChuyenTrang(idlich) {
-        console.log("id ", idlich);
+    
         $.ajax({
             type: "POST",
             url: 'LichDatPhong?handler=QuyenChuyenTrang',
@@ -278,7 +276,7 @@
         var phong = $("#selectphong").dxLookup("instance").option("value");
         var lich = $("#checklich").dxCheckBox("instance").option("value");
 
-        var FilterLich = [["Phong.TrangThai", "=", false], "and", ["TinhTrangId", "<>", 5], 'and', ['TinhTrangId', '<>', 6]]; //điều kiện lọc ban đầu
+        var FilterLich = [["Phong.TrangThai", "=", false], "and", ["TinhTrangId", "<>", 2], 'and', ['TinhTrangId', '<>', 3]]; //điều kiện lọc ban đầu
         if (lich && phong > 0) {
             FilterLich = [FilterLich, "and", ["NguoiDatId", "=", @Model.VienChucId], "and", ["PhongId", "=", phong]];
         } else if (lich) {
@@ -290,7 +288,7 @@
         var scheduler = $("#scheduler").dxScheduler("instance");
         var data = scheduler.getDataSource();
         data.filter(FilterLich);
-        data.load();
+        data.load(); 
         scheduler.repaint();
     }
 

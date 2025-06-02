@@ -68,7 +68,7 @@
                             .Url("https://tms.tvu.edu.vn:10220/api/GhDatPhongs").Expand("Phong", "Phong.Loai", "TinhTrang", "NguoiDat")
                             .Key("Id").BeforeSend("dvtm")
                         )
-                        .DataSourceOptions(s => s.Filter(new JS("['TinhTrangId', '=', 5]")))
+                        .DataSourceOptions(s => s.Filter(new JS("['TinhTrangId', '=', 2]")))
                         .ShowBorders(true)
                         .FocusedRowEnabled(true)
                         .FocusedRowIndex(0)            
@@ -82,7 +82,7 @@
                              columns.Add().Type(GridCommandColumnType.Buttons) .Width(75)
                                 .Buttons(b =>
                                 {                                   
-                                    b.Add().Hint("Duyệt lịch").Icon("fas fa-calendar-check").Text("Duyệt lịch").CssClass("custom-button").OnClick("DuyetLich");
+                                    b.Add().Hint("Duyệt lịch").Icon("far fa-calendar-check").Text("Duyệt lịch").CssClass("custom-button").OnClick("DuyetLich");
                                 });
                             columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
                             columns.AddFor(m => m.DeNghiId).Caption("Mã đề nghị").Width(60);
@@ -94,7 +94,12 @@
                             columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng");
                             columns.AddFor(m => m.NgayTao).Visible(false).SortOrder(SortOrder.Asc);
 
-                        })
+                        })                                               
+                        @* .Selection(s => s
+                            .Mode(SelectionMode.Multiple)
+                            .ShowCheckBoxesMode(GridSelectionShowCheckBoxesMode.Always)
+                            .SelectAllMode(SelectAllMode.AllPages)
+                        ) *@
                         .Summary(s => s.TotalItems(items =>
                         {
                             items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("NguoiDat").DisplayFormat("Tổng: {0} lịch");
@@ -138,11 +143,26 @@
                             .ShowInfo(true)
                         )
                         .OnSelectionChanged(@<text>
-                            function(e) {
+                            function(e) {                                
                                 e.component.collapseAll(-1);
                                 e.component.expandRow(e.currentSelectedRowKeys[0]);
                             }
                         </text>)
+                        @* .OnRowClick(@<text>
+                            function(e) {                           
+                                if ( $(e.event.target).closest(".dx-checkbox").length === 0) {                           
+                                    const rowKey = e.key;                          
+                                    if (e.component.isRowExpanded(rowKey)) {
+                                        e.component.collapseRow(rowKey);
+                                    }
+                                    else {
+                                        e.component.collapseAll(-1);
+                                        e.component.expandRow(rowKey);
+                                    }
+                                }
+                            }
+                        </text>) *@
+
                      )
                 </div> 
 
@@ -218,7 +238,7 @@
                                 )
                             </text>);
                         })
-                        .Paging(p => p.PageSize(10))
+                        .Paging(p => p.PageSize(30))
                         .Pager(p => p
                         .Visible(true)
                         .ShowPageSizeSelector(true)
@@ -252,6 +272,7 @@
             <div style="color: gray; font-size:12px">
                 <p>Lịch đặt bị trùng phòng trong khung thời gian với lịch đã được duyệt khác.</p>
                 <p>Vui lòng nhập lý do không thể duyệt để gửi phản hồi.</p>
+                <p style="font-style: italic;">Vd: Lịch đặt bị trùng phòng</p>
             </div> <br/>
             <div class="dx-field">
                 <div class="dx-field-label">Mã đặt phòng:</div>
@@ -266,7 +287,7 @@
                 <div class="dx-field-label">Lý do:</div>
                 <div class="dx-field-value">
                     @(Html.DevExtreme().TextArea()
-                        .ID("GhiChu")                        
+                        .ID("GhiChu")                                     
                         
                      )
                 </div>               
@@ -380,37 +401,17 @@
    
 
     /* Danh sách lịch */
+
     function onRowPrepared(e) {
-        if (e.rowType === "data" && e.data.TrangThai === true ) {
-            $(e.rowElement).css("color", "#808080");
+        if (e.rowType == "data") {
+            if (e.data.TinhTrangId === 7) { //đã hủy
+                e.rowElement.css("color", "#a6a6a6");
+            }
+            if (e.data.TinhTrangId === 3) { //lịch không duyệt
+                e.rowElement.css("background-color", "#eaeae1");
+            }
         }
     }
-
-    // function SetColorRow(e) {
-
-    //     if (e.rowType == "data") {
-    //         if (e.data.TinhTrangId === 1) {
-    //             e.rowElement.css("color", "#eee5de");
-    //         }
-    //         if (e.data.TinhTrangId === 2) {
-    //             e.rowElement.css("color", "#fff8dc");
-    //         }
-    //         if (e.data.TinhTrangId === 3) {
-    //             e.rowElement.css("color", "#faf0e6");
-    //         }
-    //         if (e.data.TinhTrangId === 4) {
-    //             e.rowElement.css("color", "#FDF5E6");
-    //         }
-    //         if (e.data.TinhTrangId === 5) {
-    //             e.rowElement.css("color", "#99FF66");
-    //         }
-    //         if (e.data.TinhTrangId === 6) {
-    //             e.rowElement.css("color", "#ccc");
-    //         }
-
-    //     }
-
-    // }
 
     
 

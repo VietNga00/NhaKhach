@@ -10,7 +10,7 @@
     var fullData = Enumerable.Range(1, 12).Select(thang => new GhThongKe
             {
                 Thang = thang,
-                TongLichDat = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongLichDat ?? 0,
+                TongLichHopLe = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongLichHopLe ?? 0,
                 TongLichHuy = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongLichHuy ?? 0,
                 TongLichQuaHan = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongLichQuaHan ?? 0,
                 TongSoKhach = Model.ThongKe.FirstOrDefault(x => x.Thang == thang)?.TongSoKhach ?? 0,
@@ -65,7 +65,7 @@
     )      
     .Series(series => {
        
-        series.Add().ValueField("TongLichDat").Name("Lịch đặt").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b30000");
+        series.Add().ValueField("TongLichHopLe").Name("Lịch hợp lệ").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b30000");
         series.Add().ValueField("TongLichHuy").Name("Lịch hủy").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#808080");
         series.Add().ValueField("TongLichQuaHan").Name("Lịch quá hạn").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b8b894");
         series.Add().ValueField("TongSoKhach").Name("Khách").Type(SeriesType.Spline).Axis("LichDatAxis").Color("#ffa500");   
@@ -110,7 +110,8 @@
         {
             columns.AddFor(m => m.Nam).Caption("Năm").GroupIndex(0);
             columns.AddFor(m => m.Thang).Caption("Tháng");           
-            columns.AddFor(m => m.TongLichDat).Caption("Tổng lịch đặt");
+            columns.AddFor(m => m.TongSoLichDat).Caption("Tổng số lịch đặt");
+            columns.AddFor(m => m.TongLichHopLe).Caption("Tổng lịch hợp lệ");
             columns.AddFor(m => m.TongLichHuy).Caption("Tổng lịch hủy");
             columns.AddFor(m => m.TongLichQuaHan).Caption("Tổng lịch quá hạn");
             columns.AddFor(m => m.TongSoKhach).Caption("Tổng số khách");
@@ -118,7 +119,7 @@
          .Summary(s => s
             .TotalItems(items =>
             {
-                items.AddFor(m => m.TongLichDat).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.TongSoLichDat).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.TongLichHuy).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.TongLichQuaHan).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.TongSoKhach).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} khách");

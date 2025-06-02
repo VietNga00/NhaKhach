@@ -75,7 +75,7 @@
                             .Url("https://tms.tvu.edu.vn:10220/api/GhDatPhongs").Expand("Phong", "Phong.Loai", "TinhTrang", "NguoiDat")
                             .Key("Id").BeforeSend("dvtm")
                         )
-                        .DataSourceOptions(s => s.Filter("[ ['TinhTrangId', '=', 1], 'and' ,['TrangThai', '=', false] ]"))
+                        .DataSourceOptions(s => s.Filter("[ ['TinhTrangId', '=', 4], 'and' ,['TrangThai', '=', false] ]"))
                         .ShowBorders(true)
                         .FocusedRowEnabled(true)
                         .FocusedRowIndex(0)
@@ -86,20 +86,19 @@
                         .ColumnHidingEnabled(true)
                         .Columns(columns =>
                         {
-                            columns.Add().Type(GridCommandColumnType.Buttons).Width(110)
+                            columns.Add().Type(GridCommandColumnType.Buttons).Width(60)
                                 .Buttons(b =>
-                                {
-                                    b.Add().Hint("Cập nhật thời gian").Icon("far fa-edit").Text("Cập nhật thời gian").CssClass("custom-button").OnClick("EditThoiGianLich");
+                                {                                 
                                     b.Add().Hint("Nhận phòng").Icon("fas fa-door-open").Text("Nhận phòng").CssClass("custom-button").OnClick("NhanPhongClick");
                                 });
                             columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
                             columns.AddFor(m => m.NguoiDat.FullName).Caption("Người đặt").Name("NguoiDat").MinWidth(130);                         
                             columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
-                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130).SortOrder(SortOrder.Asc);
                             columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
-                            columns.AddFor(m => m.AllDay).Caption("Cả ngày").Width(50);                          
+                            columns.AddFor(m => m.AllDay).Caption("Cả ngày").Width(50);
                             columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng");
-                            columns.AddFor(m => m.NgayTao).Visible(false).SortOrder(SortOrder.Asc);
+                            //columns.AddFor(m => m.NgayTao).Visible(false).SortOrder(SortOrder.Asc);
 
                         })
                         .Summary(s => s.TotalItems(items =>
@@ -159,7 +158,7 @@
                     @(Html.DevExtreme().DataGrid<GhDatPhong>()
                         .ID("gridTraPhong")
                         .DataSource(Model.Data, "Id")
-                        .DataSourceOptions(e => e.Filter("[ ['TinhTrangId', '=', 2], 'and' ,['TrangThai', '=', false] ]"))
+                        .DataSourceOptions(e => e.Filter("[ ['TinhTrangId', '=', 5], 'and' ,['TrangThai', '=', false] ]"))
                         .ShowBorders(true)
                         .FocusedRowEnabled(true)
                         .FocusedRowIndex(0)
@@ -252,107 +251,6 @@
 
 
 
-<!-- Show edit lịch -->
-@(Html.DevExtreme().Popup()
-    .ID("popupedit")
-    .Title("Cập nhật thông tin lịch đặt")
-    .Width(800)
-    //.Height("Auto")
-    .ShowCloseButton(true)
-    .Visible(false)
-    .ContentTemplate(@<text>
-    <form method="post">
-        <div class="row">
-            <div class="dx-field col-6">
-                <div class="dx-field-label"><b>Mã lịch:</b></div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().TextBox()
-                    .ID("malich")
-                    .Value("")
-                    .ReadOnly(true)
-                    )
-                </div>
-            </div>
-            <div class="dx-field col-6">
-                <div class="dx-field-label"><b>Phòng:</b></div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().TextBox()
-                    .ID("phong")
-                    .Value("")
-                    .ReadOnly(true)
-                    )
-                </div>
-            </div>
-        </div>       
-        <div class="row">
-            <div class="dx-field col-6">
-                <div class="dx-field-label"><b>Người đặt:</b></div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().TextBox()
-                    .ID("nguoidat")
-                    .Value("")
-                    .ReadOnly(true)
-                    )
-                </div>
-            </div>
-            <div class="dx-field col-6">
-                <div class="dx-field-label"><b>Khách ở:</b></div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().TextBox()
-                    .ID("khach")
-                    .Value("")
-                    .ReadOnly(true)
-                    )
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="dx-field col-6">
-                <div class="dx-field-label"><b>Từ ngày:</b></div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().DateBox()
-                    .ID("tungay")
-                    .Value("")
-                    .Type(DateBoxType.DateTime)
-                    .DisplayFormat("HH:mm:ss dd/MM/yyyy")
-                    //.OnValueChanged("ChangedTime")
-                    )
-                </div>
-            </div>
-            <div class="dx-field col-6">
-                <div class="dx-field-label"><b>Đến ngày:</b></div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().DateBox()
-                    .ID("denngay")
-                    .Value("")                
-                    .Type(DateBoxType.DateTime)
-                    .DisplayFormat("HH:mm:ss dd/MM/yyyy")
-                    )
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="dx-field col-6">
-                <div class="dx-field-label"><b>Cả ngày:</b></div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().CheckBox()
-                    .ID("cangay")                   
-                    .ElementAttr(new {style = "float: left" })                    
-                    )
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12" style="text-align: right;padding-top:30px">
-                <button type="button" class="btn btn-success" onclick="SaveLich()">Lưu thay đổi</button>
-            </div>
-        </div>
-
-    </form>
-    </text>)
-)
-
 <script>
     function getLoadPanelInstance() {
         return $("#loadpanel").dxLoadPanel("instance");
@@ -397,7 +295,6 @@
 
                         location.reload();
                         DevExpress.ui.notify("Nhận phòng thành công", "success", 3000);
-
                     }
                 }).done(function (data) {
 
@@ -406,116 +303,7 @@
         });
     }
 
-    // Format thời gian
-    function formatLocalDatetime(date) {
-        const pad = n => n.toString().padStart(2, '0');
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-    }
-
-    //Edit lịch
-    function EditThoiGianLich(e) {
-        var idlich = e.row.data.Id;
-        getLoadPanelInstance().show();
-
-        $.ajax({
-            type: "GET",
-            url: 'NhanTraPhong?handler=ShowLich',
-            data: { idlich: idlich },
-            success: function (data) {
-               getLoadPanelInstance().hide();
-        
-                $("#popupedit").dxPopup("instance").show();
-                $("#malich").dxTextBox("instance").option("value", data.Id);
-                $("#phong").dxTextBox("instance").option("value", data.MaPhong);             
-                $("#tungay").dxDateBox("instance").option("value", data.TuNgay);
-                $("#denngay").dxDateBox("instance").option("value", data.DenNgay);
-                $("#cangay").dxCheckBox("instance").option("value", data.AllDay);
-                $("#nguoidat").dxTextBox("instance").option("value", data.TenNguoiDat);
-                $("#khach").dxTextBox("instance").option("value", data.TenKhach);
-            },
-            error: function () {
-                DevExpress.ui.notify("Có lỗi xảy ra khi tải dữ liệu lịch đặt.", "error", 2000);
-            }
-        });
-    }
-
-    $(function () {
-        $("#popupedit").dxPopup("instance").option("onShown", function () {
-            const cangay = $("#cangay").dxCheckBox("instance");
-            const tu = $("#tungay").dxDateBox("instance");
-            const den = $("#denngay").dxDateBox("instance");
-
-            if (!cangay || !tu || !den) return;
-
-            cangay.option("onValueChanged", function (e) {               
-                const start = new Date(tu.option("value"));
-                const end = new Date(den.option("value"));
-
-                if (e.value === true) {
-                    start.setHours(0, 0, 0);
-                    end.setHours(23, 59, 59);
-
-                    tu.option("value", start);
-                    den.option("value", end);
-
-                    tu.option("readOnly", true);
-                    den.option("readOnly", true);                 
-                } else {
-                    start.setHours(8, 0, 0);
-                    end.setHours(17, 0, 0);
-
-                    tu.option("value", start);   
-                    den.option("value", end);
-
-                    tu.option("readOnly", false);
-                    den.option("readOnly", false);                    
-                }
-
-            });
-        });
-    });
-  
-
-    function SaveLich() {
-        var idlich = $("#malich").dxTextBox("instance").option("value");
-        var tungay = formatLocalDatetime($("#tungay").dxDateBox("instance").option("value"));
-        var denngay = formatLocalDatetime($("#denngay").dxDateBox("instance").option("value"));
-        var isAllDay = $("#cangay").dxCheckBox("instance").option("value");
-       
-        if (!tungay || !denngay) {
-            DevExpress.ui.notify("Vui lòng chọn đầy đủ thời gian!", "error", 3000);
-            return;
-        }
-
-        if (tungay >= denngay) {
-            DevExpress.ui.notify("Thời gian kết thúc phải sau thời gian bắt đầu", "error", 3000);
-            return;
-        }      
-
-        $.ajax({
-            type: "POST",
-            url: 'NhanTraPhong?handler=UpdateLich',
-            data: {
-                idlich: idlich, 
-                tungay: tungay, 
-                denngay: denngay, 
-                cangay: isAllDay 
-            },
-            success: function (response) {
-                if (response.success) {
-                    $("#popupedit").dxPopup("instance").hide();
-                    DevExpress.ui.notify("Cập nhật thời gian thành công", "success", 2000);
-                    location.reload();
-                } else {
-                    DevExpress.ui.notify(response.message, "error", 3000);
-                }
-            },
-            error: function () {
-                DevExpress.ui.notify("Có lỗi xảy ra khi cập nhật thời gian", "error", 3000);
-            }
-        });
-    };    
-
+   
 
     /* Trả phòng */
    function TraPhongClick(e){

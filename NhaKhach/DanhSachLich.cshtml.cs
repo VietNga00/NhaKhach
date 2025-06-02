@@ -12,7 +12,7 @@ using TMSWeb_Core.Models;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
-    [Authorize(Roles = "Users,Administrators")]
+    [Authorize(Roles = "Administrators")]
     [IgnoreAntiforgeryToken]
     public class DanhSachLichModel : PageModel
     {
@@ -56,13 +56,13 @@ namespace TMSWeb_Core.Pages.NhaKhach
             }
             else
             {                
-                var isTrungLich = await client.For<GhDatPhong>().Filter(d => d.Id != DatPhong.Id && d.PhongId == DatPhong.PhongId && (d.TinhTrangId == 1 || d.TinhTrangId == 2) && d.TuNgay <= DatPhong.DenNgay && d.DenNgay >= DatPhong.TuNgay).FindEntriesAsync();
+                var isTrungLich = await client.For<GhDatPhong>().Filter(d => d.Id != DatPhong.Id && d.PhongId == DatPhong.PhongId && (d.TinhTrangId == 4 || d.TinhTrangId == 5) && d.TuNgay <= DatPhong.DenNgay && d.DenNgay >= DatPhong.TuNgay).FindEntriesAsync();
                 if (isTrungLich.Any())
                 {
                     return new JsonResult(new {success = false, phanhoi = true });
                 }
 
-                DatPhong.TinhTrangId = 1; //duyệt lịch -> đã đặt
+                DatPhong.TinhTrangId = 4; //duyệt lịch -> đã đặt
                 DatPhong.NguoiDuyetId = (int)VienChucId;
                 DatPhong.NgayDuyet = DateTime.Now;
 
@@ -99,7 +99,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             }
             else
             {
-                DatPhong.TinhTrangId = 6; //Không duyệt
+                DatPhong.TinhTrangId = 3; //Không duyệt
                 DatPhong.GhiChu = ghichu;
                 DatPhong.NguoiDuyetId = (int)VienChucId;
                 DatPhong.NgayDuyet = DateTime.Now;

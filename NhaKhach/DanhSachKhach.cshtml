@@ -17,7 +17,7 @@
     .DataSource(d => d.OData().Version(4)
         .Url("https://tms.tvu.edu.vn:10220/api/GhDanhSachKhachs")            
         .Key("Id").BeforeSend("dvtm")
-    )
+    )    
     .ShowBorders(true)
     .FilterRow(f => f.Visible(true))
     .FocusedRowEnabled(true)
@@ -42,7 +42,8 @@
             .DataSource(new[] {
                 new { Id = 0, Name = "Chờ duyệt lịch" },
                 new { Id = 1, Name = "Lịch đã duyệt" },
-                new { Id = 2, Name = "Không duyệt" }
+                new { Id = 2, Name = "Từ chối lịch" },
+                 new { Id = 3, Name = "Đề nghị đã hủy" }
             }).ValueExpr("Id").DisplayExpr("Name")
         );
 
@@ -70,9 +71,16 @@
     }
 
     function onRowPrepared(e) {
-        if (e.rowType === "data" && e.data.TrangThai === 2) {
-            $(e.rowElement).css("color", "#808080");
+        if (e.rowType == "data") {
+            if (e.data.TrangThai === 2) { //không duyệt
+                e.rowElement.css("background-color", "#eaeae1");
+            }            
+            if (e.data.TrangThai === 3) { //Khách của đề nghị hủy
+                e.rowElement.css("color", "#cccccc");
+            }
         }
     }
+
+
 
 </script>        

@@ -94,7 +94,7 @@
                         })
                         .Summary(s => s.TotalItems(items =>
                             {
-                                items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("DonVi").DisplayFormat("Tổng: {0} ");
+                                items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("DonVi").DisplayFormat("Tổng: {0} đề nghị");
                             })
                         )
                         .Paging(p => p.PageSize(20))
@@ -116,6 +116,7 @@
                                 e.component.expandRow(e.currentSelectedRowKeys[0]);
                             }
                         </text>)
+                        .OnRowPrepared("onRowPrepared")
                         )
                 </div>
 
@@ -140,11 +141,11 @@
                         .Columns(columns =>
                         {                         
                             columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
-                            columns.AddFor(m => m.DeNghiId).Caption("Mã đề nghị").Width(60);
-                            columns.AddFor(m => m.NguoiDat.FullName).Caption("Người đặt").Name("NguoiDat").MinWidth(130);
+                            columns.AddFor(m => m.DeNghiId).Caption("Mã đề nghị").Width(60).GroupIndex(0);
+                            columns.AddFor(m => m.NguoiDat.FullName).Caption("Người đặt").Name("NguoiDat").Width(130);
                             columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
-                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
-                            columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").MinWidth(130);
+                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").Width(130);
+                            columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").Width(130);
                             columns.AddFor(m => m.AllDay).Caption("Cả ngày").Width(50);                           
                             columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng lịch");
                             columns.AddFor(m => m.TrangThai).Caption("Trạng thái lịch").Lookup(lookup => lookup
@@ -191,14 +192,16 @@
                                             .DataSource(new[] {
                                                 new { Id = 0, Name = "Chờ duyệt lịch" },
                                                 new { Id = 1, Name = "Lịch đã duyệt" },
-                                                new { Id = 2, Name = "Từ chối lịch" }
+                                                new { Id = 2, Name = "Từ chối lịch" },
+                                                new { Id = 3, Name = "Đề nghị đã hủy" }
                                             }).ValueExpr("Id").DisplayExpr("Name")
                                         );
                                     })
+                                    .OnRowPrepared("onRowPrepared")
                                 )
                             </text>);
                         })
-                        .Paging(p => p.PageSize(10))
+                        .Paging(p => p.PageSize(20))
                         .Pager(p => p
                         .Visible(true)
                         .ShowPageSizeSelector(true)
@@ -238,7 +241,7 @@
                             columns.Add().Type(GridCommandColumnType.Buttons).Width(70)
                                 .Buttons(b =>
                                 {
-                                    b.Add().Hint("Đặt lịch").Icon("fas fa-calendar").Text("Đặt lịch").CssClass("custom-button").OnClick("DatLich").Visible(new JS("isDatLichVisible"));
+                                    b.Add().Hint("Đặt lịch").Icon("far fa-calendar-plus").Text("Đặt lịch").CssClass("custom-button").OnClick("DatLich").Visible(new JS("isDatLichVisible"));
                                 });
                             columns.Add().Caption("STT").CellTemplate(new JS("SoThuTu"));
                             columns.AddFor(m => m.TenKhach).Caption("Họ tên");
@@ -250,11 +253,11 @@
                                 .DataSource(new[] {                                  
                                     new { Id = 0, Name = "Chờ duyệt lịch" },
                                     new { Id = 1, Name = "Lịch đã duyệt" },
-                                    new { Id = 2, Name = "Từ chối lịch" }
+                                    new { Id = 2, Name = "Từ chối lịch" },                                   
                                 }).ValueExpr("Id").DisplayExpr("Name")
                             );
                         })
-
+                        .OnRowPrepared("onRowPrepared")
                     )
                 </text>)
                 .Option("tabExtras", new JS("data"));
@@ -272,17 +275,20 @@
                             columns.Add().Type(GridCommandColumnType.Buttons).Width(60)
                                 .Buttons(b =>
                                 {
-                                    b.Add().Hint("Chỉnh sửa lịch").Icon("fas fa-edit").Text("Chỉnh sửa lịch").CssClass("custom-button").OnClick("EditLich").Visible(new JS("isEditVisible"));
+                                     b.Add().Hint("Chỉnh sửa lịch").Icon("far fa-edit").Text("Chỉnh sửa lịch").CssClass("custom-button").OnClick("EditLich").Visible(new JS("isEditVisible"));                                    
+                                     b.Add().Hint("Đổi phòng").Icon("fas fa-retweet").Text("Đổi phòng").CssClass("custom-button").OnClick("ChangedLich").Visible(new JS("isChangeVisible"));  
                                 });
                             columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
-                            columns.AddFor(m => m.Khach.TenKhach).Caption("Tên khách").MinWidth(200);
+                            columns.AddFor(m => m.Khach.TenKhach).Caption("Tên khách").Width(200);
                             columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
-                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").MinWidth(125);
-                            columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").MinWidth(125);
+                            columns.AddFor(m => m.TuNgay).Caption("Từ ngày").Format("dd/MM/yyyy HH:mm").Width(125);
+                            columns.AddFor(m => m.DenNgay).Caption("Đến ngày").Format("dd/MM/yyyy HH:mm").Width(125);
                             columns.AddFor(m => m.AllDay).Caption("Cả ngày").Width(60);
                             columns.AddFor(m => m.TinhTrang.TenTinhTrang).Caption("Tình trạng lịch");
                             columns.AddFor(m => m.GhiChu).Caption("Ghi chú");
+                            columns.AddFor(m => m.KhachId).Visible(false).SortOrder(SortOrder.Asc);
                         })
+                        .OnRowPrepared("onRowPrepared")
                     )
                 </text>)
                 .Option("tabExtras", new JS("data"));             
@@ -314,24 +320,30 @@
             if (grid2) grid2.repaint();
         }
     }
+
+
     function SoThuTu(container, e) {
         var index = e.component.pageIndex() * e.component.pageSize() + e.rowIndex + 1;
         container.text(index);
     }
 
-/***** Danh sách đề nghị *****/
 
-    function isDatLichVisible(e) {
-        return e.row.data.TrangThai === null; //chưa có lịch
+    function onRowPrepared(e) {
+        if (e.rowType == "data") {
+            if (e.data.TinhTrangId === 7) { //đã hủy
+                e.rowElement.css("color", "#a6a6a6");
+            }
+            if (e.data.TinhTrangId === 3) { //lịch không duyệt
+                e.rowElement.css("background-color", "#eaeae1");
+            }
+            if (e.data.TrangThai === 3) { //Khách của đề nghị hủy
+                e.rowElement.css("color", "#cccccc");
+            }
+        }
     }
 
-    function DatLich(e) {
-        var khachId = e.row.data.Id;
-        var denghiId = e.row.data.DeNghiId;
 
-        window.location.href = 'LichDatPhong?denghi=' + denghiId + '&khach=' + khachId;
-    }
-
+/***** Danh sách đề nghị *****/  
 
     //Check lịch của khách trong đề nghị
     $(document).ready(function () {
@@ -349,7 +361,7 @@
 
     function LoadContextMenu(e) {
         if (e.row.rowType === "data") {
-            if (e.row.data.TinhTrangId == 8) {
+            if (e.row.data.TinhTrangId == 6) {
                 e.items = [{
                     text: "In đề nghị",
                     icon: "print",
@@ -359,7 +371,7 @@
                 }];
             }
             else {
-                if (e.row.data.TinhTrangId == 7) { //Khởi tạo
+                if (e.row.data.TinhTrangId == 1) { //Khởi tạo
                     e.items = [
                         {
                             text: "Chỉnh sửa",
@@ -402,6 +414,8 @@
         });
     }
 
+
+
 /***** MasterDetail - Danh sách khách *****/
     function isDatLichVisible(e) {
         return e.row.data.TrangThai === null; //chưa có lịch
@@ -416,23 +430,32 @@
 
 
 /***** MasterDetail - Lịch đặt của khách *****/
+
+    //Chỉnh sửa lịch
     function isEditVisible(e) {
-        return e.row.data.TinhTrangId === 6; // Không duyệt
+        return e.row.data.TinhTrangId === 2;
     }
 
-    function EditLich(e) {
+    function EditLich(e) {       
         var lichId = e.row.data.Id;
+        window.location.href = 'TaoDatPhong?datphongID=' + lichId;
+    }
 
-        window.location.href = 'ChinhSuaLichDat?lich=' + lichId;
+
+    //Đổi phòng - Lịch không được duyệt
+    function isChangeVisible(e) {
+        return e.row.data.TinhTrangId === 3; //Không duyệt
+    }
+
+    function ChangedLich(e) {
+        var lichId = e.row.data.Id;       
+
+        window.location.href = 'DoiPhong?lich=' + lichId;
     }
 
 
 
 /***** Danh sách lịch đặt *****/
-    function onRowPrepared(e) {
-        if (e.rowType === "data" && e.data.TrangThai === true) {
-            $(e.rowElement).css("color", "#808080");
-        }
-    }
+    
 
 </script>

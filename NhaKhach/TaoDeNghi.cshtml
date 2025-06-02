@@ -45,7 +45,7 @@ else
     @Html.AntiForgeryToken()
     <!-- Thông tin đề nghị-->
     <div class="dx-field" style="margin-bottom: 20px;">
-        <h4 class="show-text"><i class="fas fa-file-alt"></i> Thông tin đề nghị sắp phòng</h4>
+        <h4 class="show-text"><i class="fas fa-file-alt"></i> Thông tin đề nghị</h4>
         <input type="hidden" id="DeNghiId" name="DeNghiId" value="@Model.DeNghi?.Id" />
 
        <div class="dx-field row">
@@ -146,7 +146,7 @@ else
             .ID("btnhuy")           
             .Text("Hủy")
             .Type(ButtonType.Normal)
-            .OnClick("function() { window.location.href = '/NhaKhach/DanhSachDeNghi'; }")
+            .OnClick("function() { window.location.href = '/NhaKhach/LichDatPhong'; }")
          )
     </div>
 
@@ -322,8 +322,7 @@ else
         $("#HiddenSoLuongKhach").val(danhsachkhach.length);
 
         var formData = $(this).serialize();
-        console.log("form ", formData);
-
+      
         var denghiId = $("#DeNghiId").val();
 
         if (denghiId && parseInt(denghiId) > 0) {
@@ -338,7 +337,7 @@ else
                         DevExpress.ui.notify("Cập nhật đề nghị thành công", "success", 3000);
 
                         setTimeout(function () {
-                            window.location.href = '/NhaKhach/DanhSachDeNghi';
+                            window.location.href = '/NhaKhach/LichDatPhong';
                         }, 1000);
                     } else {
                         DevExpress.ui.notify(data.message, "error", 3000);
@@ -361,7 +360,7 @@ else
                         DevExpress.ui.notify("Tạo đề nghị thành công", "success", 3000);
 
                         setTimeout(function () {
-                            window.location.href = '/NhaKhach/DanhSachDeNghi';
+                            window.location.href = '/NhaKhach/LichDatPhong';
                         }, 1000);
                     } else {
                         DevExpress.ui.notify(data.message, "error", 3000);

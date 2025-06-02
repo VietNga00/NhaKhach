@@ -13,7 +13,7 @@ using System.Diagnostics;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
-    [Authorize(Roles = "Users,Administrators")]
+    [Authorize(Roles = "Administrators")]
     [IgnoreAntiforgeryToken]
     public class ThongKeModel : PageModel
     {
@@ -101,14 +101,15 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 bool isHienTai = (nam == namhientai && thang == thanghientai);
                 var duieutam = await LayThongKeThang(nam, thang);
 
-                if (duieutam.TongLichDat == 0) continue;
+                if (duieutam.TongSoLichDat == 0) continue;
 
                 var thongke = await _dbContext.GhThongKe.FirstOrDefaultAsync(x => x.Nam == nam && x.Thang == thang);
                 if(thongke != null)
                 {
-                    if(thongke.TongLichDat != duieutam.TongLichDat || thongke.TongLichQuaHan != duieutam.TongLichQuaHan || thongke.TongLichHuy != duieutam.TongLichHuy || thongke.TongSoKhach != duieutam.TongSoKhach)
+                    if(thongke.TongSoLichDat != duieutam.TongSoLichDat || thongke.TongLichHopLe != duieutam.TongLichHopLe || thongke.TongLichQuaHan != duieutam.TongLichQuaHan || thongke.TongLichHuy != duieutam.TongLichHuy || thongke.TongSoKhach != duieutam.TongSoKhach)
                     {
-                        thongke.TongLichDat = duieutam.TongLichDat;
+                        thongke.TongSoLichDat = duieutam.TongSoLichDat;
+                        thongke.TongLichHopLe = duieutam.TongLichHopLe;
                         thongke.TongLichHuy = duieutam.TongLichHuy;
                         thongke.TongLichQuaHan = duieutam.TongLichQuaHan;
                         thongke.TongSoKhach = duieutam.TongSoKhach;
@@ -134,8 +135,9 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 var khachhang = await _dbContext.GhDatPhong.Where(x => x.TuNgay.Year == nam && x.TuNgay.Month == thang && x.KhachId != null).Select(x => x.KhachId).Distinct().CountAsync();
 
 
-                int solichdat = datphong.Count();
-                int solichhuy = datphong.Count(x => x.TinhTrangId == 4 && x.NgayHuy.HasValue);
+                int tongsolich = datphong.Count();
+                int solichhople = datphong.Count(x => x.TinhTrangId != 2 && x.TinhTrangId != 3 && x.TinhTrangId != 7 && x.TrangThai != true);
+                int solichhuy = datphong.Count(x => x.TinhTrangId == 7 && x.NgayHuy.HasValue);
                 int solichquahan = datphong.Count(x => x.TrangThai == true);
                 int sokhach = khachhang;               
 
@@ -143,7 +145,8 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 {
                     Nam = nam,
                     Thang = thang,
-                    TongLichDat = solichdat,
+                    TongSoLichDat = tongsolich,
+                    TongLichHopLe = solichhople,
                     TongLichHuy = solichhuy,
                     TongLichQuaHan = solichquahan,
                     TongSoKhach = sokhach,
@@ -159,7 +162,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 {
                     Nam = nam,
                     Thang = thang,
-                    TongLichDat = 0,
+                    TongSoLichDat = 0,
                     TongLichHuy = 0,
                     TongLichQuaHan = 0,
                     TongSoKhach = 0,                 

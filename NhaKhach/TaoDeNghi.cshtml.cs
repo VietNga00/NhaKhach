@@ -38,6 +38,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             var accessToken = common.RefreshAccessToken(HttpContext);
             string url = Request.Path;
             string email = User.FindFirst("Email").Value;
+            
             var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
             var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
             this.VienChucId = taikhoan.VienChucId;
@@ -51,7 +52,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 }
 
                 //Check quyền
-                List<string> dsAdmin = new List<string> { "nvvnga1103@gmail.com", }; // "nhukhanhtv052@gmail.com" / nvvnga1103@gmail.com
+                List<string> dsAdmin = new List<string> { "nvvnga1103@gmail.com", }; 
                 bool isAdmin = dsAdmin.Contains(email.ToLower());
                 bool isNguoiTao = (DeNghi.NguoiTaoId == taikhoan.VienChucId);
                 if (!isAdmin && !isNguoiTao)
@@ -66,7 +67,6 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 this.DeNghi = new GhDeNghi();  //Tạo đề nghị
 
             }
-
             return Page();
         }
 
@@ -87,7 +87,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             DeNghi.NoiDung = Request.Form["NoiDung"];
             DeNghi.SoLuongKhach = Convert.ToInt32(Request.Form["SoLuongKhach"]);
             DeNghi.GhiChu = Request.Form["GhiChu"];
-            DeNghi.TinhTrangId = 7;     //Khởi tạo
+            DeNghi.TinhTrangId = 1;     //Khởi tạo
 
             _dbContext.GhDeNghi.Add(DeNghi);
             await _dbContext.SaveChangesAsync();
@@ -98,7 +98,8 @@ namespace TMSWeb_Core.Pages.NhaKhach
             foreach(var khach in listkhach)
             {
                 khach.DeNghiId = id;
-               // khach.NgayTao = DateTime.Now;
+                khach.NgayTao = DateTime.Now;
+
                 _dbContext.GhDanhSachKhach.Add(khach);
             }
             await _dbContext.SaveChangesAsync();
@@ -106,11 +107,16 @@ namespace TMSWeb_Core.Pages.NhaKhach
             return new JsonResult(new {success = true}); 
         }
 
-
+         
         //Cập nhật đề nghị
         public async Task<IActionResult> OnPostUpdateDeNghiAsync()
         {
             var accessToken = common.RefreshAccessToken(HttpContext);
+            string url = Request.Path;
+            string email = User.FindFirst("Email").Value;
+            var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
+            var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
+            this.VienChucId = taikhoan.VienChucId;
 
             var form = await Request.ReadFormAsync();
             var id = Convert.ToInt32(form["DeNghiId"]);
@@ -127,7 +133,8 @@ namespace TMSWeb_Core.Pages.NhaKhach
             DeNghi.NoiDung = Request.Form["NoiDung"];
             DeNghi.SoLuongKhach = Convert.ToInt32(Request.Form["SoLuongKhach"]);
             DeNghi.GhiChu = Request.Form["GhiChu"];
-            //DeNghi.NgayCapNhat = DateTime.Now;
+            DeNghi.NguoiThucHienId = (int)VienChucId;
+            DeNghi.NgayCapNhat = DateTime.Now; 
 
             _dbContext.GhDeNghi.Update(DeNghi);
 
@@ -151,8 +158,8 @@ namespace TMSWeb_Core.Pages.NhaKhach
                     SoCccd = newKh.SoCccd,
                     GioiTinh = newKh.GioiTinh,
                     ChucDanh = newKh.ChucDanh,
-                    Sdt = newKh.Sdt
-                   // NgayTao = DateTime.Now
+                    Sdt = newKh.Sdt,
+                    NgayTao = DateTime.Now
                 };
                 _dbContext.GhDanhSachKhach.Add(khachmoi);  //Thêm khách mới
             }
@@ -162,12 +169,17 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 var khachcu = dsKhachCu.FirstOrDefault(x => x.Id == newKh.Id);
                 if (khachcu != null)
                 {
-                    khachcu.TenKhach = newKh.TenKhach;
-                    khachcu.SoCccd = newKh.SoCccd;
-                    khachcu.GioiTinh = newKh.GioiTinh;
-                    khachcu.ChucDanh = newKh.ChucDanh;
-                    khachcu.Sdt = newKh.Sdt;
-                    //khachcu.NgayCapNhat = DateTime.Now;
+                    bool isChanged = khachcu.TenKhach != newKh.TenKhach || khachcu.SoCccd != newKh.SoCccd || khachcu.GioiTinh != newKh.GioiTinh || khachcu.ChucDanh != newKh.ChucDanh || khachcu.Sdt != newKh.Sdt;
+
+                    if (isChanged)
+                    {
+                        khachcu.TenKhach = newKh.TenKhach;
+                        khachcu.SoCccd = newKh.SoCccd;
+                        khachcu.GioiTinh = newKh.GioiTinh;
+                        khachcu.ChucDanh = newKh.ChucDanh;
+                        khachcu.Sdt = newKh.Sdt;
+                        khachcu.NgayCapNhat = DateTime.Now;
+                    }
 
                     _dbContext.GhDanhSachKhach.Update(khachcu); //Cập nhật khách
                 }

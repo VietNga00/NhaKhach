@@ -1,11 +1,12 @@
 ﻿@page
-@model TMSWeb_Core.Pages.NhaKhach.ChinhSuaLichDatModel
-@using TMS_ModelCore.Models
+@model TMSWeb_Core.Pages.NhaKhach.DoiPhongModel
+@using TMSWeb_Core.Models
 
 @{
-    ViewData["Title"] = "Chỉnh sửa lịch đặt";
+    ViewData["Title"] = "Đổi phòng";
     Layout = "~/Pages/Shared/_Layout_NhaKhach.cshtml";
 }
+
 
 <style>
     .dx-field-label {
@@ -31,8 +32,8 @@
 </style>
 
 
+<h2 class="content-block titlePage">Đổi phòng cho lịch đặt</h2>
 
-<h2 class="content-block titlePage">Chỉnh sửa lịch đặt</h2>
 
 <form id="form" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
     @Html.AntiForgeryToken()
@@ -55,10 +56,10 @@
                         .DisplayExpr(new JS("nguoidat_displayExpr"))
                         .DataSourceOptions(d =>
                         {
-                            d.Select(new string[] { "Id", "Ho", "TenDem", "Ten"});
+                            d.Select(new string[] { "Id", "Ho", "TenDem", "Ten" });
                             d.Paginate(true);
                         })
-                        .Value(Model.DatPhong.NguoiDatId)                       
+                        .Value(Model.DatPhong.NguoiDatId)
                         .ReadOnly(true)
                         )
                 </div>
@@ -67,7 +68,7 @@
                 <div class="dx-field-label">Đề nghị</div>
                 <div class="dx-field-value">
                     @(Html.DevExtreme().TextBox().ID("DeNghiId").Name("DeNghiId")
-                        .Value($"Đề nghị {Model.DatPhong.DeNghiId}")      
+                        .Value($"Đề nghị {Model.DatPhong.DeNghiId}")
                         .ReadOnly(true)
                         )
                 </div>
@@ -81,7 +82,7 @@
             <div class="col">
                 <div class="dx-field-label">Đơn vị đặt</div>
                 <div class="dx-field-value">
-                    @(Html.DevExtreme().TextBox().ID("DonViId").Name("DonViId")                    
+                    @(Html.DevExtreme().TextBox().ID("DonViId").Name("DonViId")
                         .Value(Model.DatPhong.DeNghi?.DonVi?.TenDonVi)
                         .ReadOnly(true)
                         )
@@ -90,7 +91,7 @@
             <div class="col">
                 <div class="dx-field-label">Tên khách</div>
                 <div class="dx-field-value">
-                    @(Html.DevExtreme().TextBox().ID("KhachId").Name("KhachId")                      
+                    @(Html.DevExtreme().TextBox().ID("KhachId").Name("KhachId")
                         .Value(Model.DatPhong.Khach?.TenKhach)
                         .ReadOnly(true)
                         )
@@ -109,12 +110,12 @@
             <div class="col">
                 <div class="dx-field-label">Loại phòng:</div>
                 <div class="dx-field-value">
-                    @(Html.DevExtreme().TextBox().ID("LoaiId").Name("LoaiId")                                         
-                        .Value(Model.DatPhong.Phong.Loai.TenLoai)                        
+                    @(Html.DevExtreme().TextBox().ID("LoaiId").Name("LoaiId")
+                        .Value(Model.DatPhong.Phong.Loai.TenLoai)
                         .ReadOnly(true)
                         )
                 </div>
-            </div>        
+            </div>
             <div class="col">
                 <div class="dx-field-label">Phòng:</div>
                 <div class="dx-field-value">
@@ -125,14 +126,14 @@
                         .Value(Model.DatPhong.Phong.Id)
                         .Placeholder($"{Model.DatPhong.Phong.MaPhong} - {Model.DatPhong.Phong.TenPhong}")
                         .OnValueChanged(@<text>
-                            function (e){
-                                var id = e.value;
-                                console.log("phong ", id);
-                                if(id){ 
-                                    LoadLoai(id); 
-                                }
-                            }
-                        </text>)
+                        function (e){
+                        var id = e.value;
+                        console.log("phong ", id);
+                        if(id){
+                        LoadLoai(id);
+                        }
+                        }
+                    </text>)
                         )
                 </div>
             </div>
@@ -169,7 +170,7 @@
                 <div class="dx-field-label" style="width: 15%!important;">Nguyên ngày:</div>
                 <div class="dx-field-value">
                     @(Html.DevExtreme().CheckBox().ID("AllDay").Name("AllDay")
-                        .Value(Model.DatPhong.AllDay)                                          
+                        .Value(Model.DatPhong.AllDay)
                         .ReadOnly(true)
                         )
                 </div>
@@ -181,9 +182,7 @@
                 <div class="dx-field-label">Ghi chú:</div>
                 <div class="dx-field-value">
                     @(Html.DevExtreme().TextArea().ID("GhiChu").Name("GhiChu")
-                        .Height(100)
-                        .Value("Đã chỉnh sửa lịch sau khi không duyệt")
-                        .ReadOnly(true)
+                        .Height(100)                                               
                         )
                 </div>
             </div>
@@ -194,7 +193,6 @@
     <div class="dx-field">
         @(Html.DevExtreme().Button()
             .ID("btn")
-            .Icon("far fa-calendar-alt")
             .Text("Cập nhật")
             .Type(ButtonType.Success)
             .UseSubmitBehavior(true)
@@ -202,10 +200,9 @@
 
         @(Html.DevExtreme().Button()
             .ID("btnHuy")
-            .Icon("fas fa-times")
             .Text("Quay lại")
             .Type(ButtonType.Normal)
-            .OnClick("function() { window.location.href = '/NhaKhach/DanhSachDeNghi'; }")
+            .OnClick("function() { window.location.href = '/NhaKhach/LichDatPhong'; }")
             )
     </div>
 
@@ -219,7 +216,7 @@
             return "";
         }
         return item.Ho + " " + (item.TenDem == "null" || item.TenDem == null ? "" : item.TenDem) + " " + item.Ten + (item.TaiKhoan == null || item.TaiKhoan == "" ? "" : " (" + item.TaiKhoan[0].Email + ")");
-    }  
+    }
 
     //Hiển thị phòng
     function phong_displayExpr(item) {
@@ -237,9 +234,9 @@
 
         $.ajax({
             type: "GET",
-            url: 'ChinhSuaLichDat?handler=CheckPhong',
+            url: 'DoiPhong?handler=CheckPhong',
             data: {
-                start: startDate, 
+                start: startDate,
                 end: endDate,
                 allDay: allDay,
                 idlich: id
@@ -248,7 +245,7 @@
                 var phongData = data;
                 var phong = $("#PhongId").dxSelectBox("instance");
                 phong.option("dataSource", phongData);
-                
+
             },
             error: function (error) {
                 console.log("Lỗi load phòng: ", error);
@@ -256,18 +253,18 @@
         });
     });
 
- 
+
     function LoadLoai(id) {
-      
+
         $.ajax({
             type: "GET",
-            url: 'ChinhSuaLichDat?handler=LoadLoaiPhong',
+            url: 'DoiPhong?handler=LoadLoaiPhong',
             data: { phongId: id },
-            success: function (data) {              
+            success: function (data) {
 
-                var loai = $("#LoaiId").dxTextBox("instance");              
-                    loai.option("value", data.ten || null); 
-                    
+                var loai = $("#LoaiId").dxTextBox("instance");
+                loai.option("value", data.ten || null);
+
                 $("#LoaiPhongId").val(data.id || "");
             },
             error: function (xhr, status, error) {
@@ -277,7 +274,7 @@
     }
 
     $("#form").on("submit", function (e) {
-        e.preventDefault();      
+        e.preventDefault();
 
         var malich = $("#Id").val();
         var phong = $("#PhongId").dxSelectBox("instance").option("value");
@@ -286,21 +283,19 @@
 
         $.ajax({
             type: "POST",
-            url: 'ChinhSuaLichDat?handler=UpdateLich',
+            url: 'DoiPhong?handler=UpdateLich',
             data: { idlich: malich, idphong: phong },
             success: function (data) {
                 if (data.success) {
                     DevExpress.ui.notify("Cập nhật lịch đặt thành công", "success", 2000);
-                    window.location.href = '/NhaKhach/DanhSachDeNghi';
+                    window.location.href = '/NhaKhach/LichDatPhong';
                 } else {
                     DevExpress.ui.notify("Cập nhật lịch đặt thất bại", "error", 2000);
                 }
             },
         });
-       
-     // cập nhạt ĐẶT PHòng:  trạng thái, tinh trạng , ghi chú, phòng / KHÁCH: trạng thái 
     });
 
 
-   
+
 </script>

@@ -28,7 +28,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
 
             if (!(await common.checkRoleAsync(email, url, "Create", HttpContext.GetTokenAsync("access_token").Result)))
             {
-                return new RedirectToPageResult("QuanLyNhaKhach/AccessDeny");
+                return new RedirectToPageResult("NhaKhach/AccessDeny");
             }
 
             return Page();

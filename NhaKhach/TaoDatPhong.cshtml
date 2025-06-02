@@ -33,13 +33,21 @@
 </style>
 
 
-<h2 class="content-block titlePage"> Tạo đặt phòng</h2>
+@if (Model.DatPhong?.Id > 0){
+
+    <h2 class="content-block titlePage">Chỉnh sửa lịch đặt</h2>
+}
+else
+{
+    <h2 class="content-block titlePage">Tạo đặt phòng</h2>
+}
 
 <form id="form" method="post" enctype="multipart/form-data" style="margin-top: 20px; " onsubmit="return validateForm()">
     @Html.AntiForgeryToken()
     <!-- Thông tin đề nghị -->
     <div class="dx-field" style="margin-bottom: 30px;">
         <h4 class="show-text"><i class="fas fa-file-alt"></i> Thông tin đề nghị</h4>
+        <input type="hidden" id="DatPhongId" name="DatPhongId" value="@Model.DatPhong?.Id" />
 
         <div class="dx-field row">
             <div class="col">
@@ -57,15 +65,15 @@
                         {
                             d.Select(new string[] { "Id", "Ho", "TenDem", "Ten", "MaVienchuc", "FullName" });
                             d.Paginate(true);
-                        }) 
-                        .Value(Model.DatPhong != null ? Model.DatPhong.NguoiDatId : Model.VienChucId)
+                        })                             
+                        .Value(Model.IsEdit ? Model.DatPhong.NguoiDatId : Model.VienChucId)
                         .DeferRendering(true)
                         .ShowClearButton(true)
-                        .ValidationMessageMode(ValidationMessageMode.Always)
-                       /// .ContentTemplate(new TemplateName("listNguoiDat"))                        
+                        .ValidationMessageMode(ValidationMessageMode.Always)                  
+                        .ReadOnly(Model.IsEdit)
                       )
                 </div>
-            </div>
+            </div>            
             <div class="col">
                 <div class="dx-field-label">Đề nghị</div>
                 <div class="dx-field-value">
@@ -73,18 +81,34 @@
                         .DataSource(d => d.OData().Version(4)
                             .Url("https://tms.tvu.edu.vn:10220/api/GhDeNghis")
                             .Key("Id").BeforeSend("dvtm")
-                        ).DisplayExpr(new JS("denghi_displayExpr")).ValueExpr("Id")
-                        .DataSourceOptions(f => f.Filter("[ ['TinhTrangId', '<>', 8] ]"))
+                        )
+                        .DisplayExpr(new JS("denghi_displayExpr"))                        
+                        .ValueExpr("Id")
+                        //.DataSourceOptions(s => s.Filter("[ ['TinhTrangId', '<>', 6],'and',['TinhTrangId','<>',7] ]")) // Hoàn thành - Đã hủy
+                        .DataSourceOptions(s =>
+                        {
+                            if (Model.isAdmin)
+                            {                                
+                                s.Filter("[ ['TinhTrangId', '<>', 6],'and',['TinhTrangId','<>',7] ]");
+                            }
+                            else
+                            {                              
+                                s.Filter($"[ ['TinhTrangId', '<>', 6],'and',['TinhTrangId','<>',7],'and',['NguoiTaoId','=', {Model.VienChucId}] ]");
+                            }
+                        })
                         .ShowClearButton(true)
-                        .ValidationMessageMode(ValidationMessageMode.Always)
-                        .Value(Model.denghiID > 0 ? Model.denghiID : null)
+                        .ValidationMessageMode(ValidationMessageMode.Always)                      
+                        .Value(Model.IsEdit ? Model.DatPhong.DeNghiId : (Model.denghiID > 0 ? Model.denghiID : null))                        
                         .OnValueChanged(@<text>
                             function (e){
+                                console.log("id ", e.value);
                                 var idDeNghi = e.value;
+
                                 if(idDeNghi){ LoadDSKhach(idDeNghi); }
                             }
                         </text>)
-                        )
+                        .Disabled(Model.IsEdit)
+                     )
                 </div>
             </div>           
         </div>   
@@ -103,9 +127,10 @@
                         )
                         .DataSourceOptions(s => s.Filter("[['LoaiDonViId','<>',2585],'and',['LoaiDonViId','<>',2228],'and',['TrangThaiId','=',4]]"))
                         .DisplayExpr("TenDonVi").ValueExpr("Id")
-                        .Value(Model.donviID > 0 ? Model.donviID : null)
+                        .Value(Model.donviID > 0 ? Model.donviID : null)                        
                         .DeferRendering(true)
                         .ValidationMessageMode(ValidationMessageMode.Always)
+                        .ReadOnly(Model.IsEdit)
                         )
                 </div>
             </div>
@@ -115,8 +140,9 @@
                     @(Html.DevExtreme().Lookup().ID("KhachId").Name("KhachId")                    
                         .DataSource(Model.DanhSachKhach)
                         .DisplayExpr("TenKhach").ValueExpr("Id")
-                        .ValidationMessageMode(ValidationMessageMode.Always)
-                        .Value(Model.khachID > 0 ? Model.khachID : null)
+                        .ValidationMessageMode(ValidationMessageMode.Always)                         
+                        .Value(Model.IsEdit ? Model.DatPhong.KhachId : (Model.khachID > 0 ? Model.khachID : null))   
+                        .Disabled(Model.IsEdit)
                     )
                 </div>
             </div>
@@ -129,6 +155,43 @@
 
         <div class="dx-field row">
             <div class="col">
+                <div class="dx-field-label">Từ ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DateBox().ID("TuNgay").Name("TuNgay")
+                        .Type(DateBoxType.DateTime).DisplayFormat("dd/MM/yyyy HH:mm:ss")
+                        .Value(Model.IsEdit ? Model.DatPhong.TuNgay : (!string.IsNullOrEmpty(Request.Query["start"]) ? DateTime.Parse(Request.Query["start"]) : DateTime.Now))
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .DisabledDates("DisabledDate")
+                        )
+                </div>
+            </div>
+            <div class="col">
+                <div class="dx-field-label">Đến ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().DateBox().ID("DenNgay").Name("DenNgay")
+                        .Type(DateBoxType.DateTime).DisplayFormat("dd/MM/yyyy HH:mm:ss")
+                        .Value(Model.IsEdit ? Model.DatPhong.DenNgay : (!string.IsNullOrEmpty(Request.Query["end"]) ? DateTime.Parse(Request.Query["end"]) : DateTime.Now))
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .DisabledDates("DisabledDate")
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="dx-field row">
+            <div class="col" style="display:flex;">
+                <div class="dx-field-label" style="width: 15% !important;">Nguyên ngày:</div>
+                <div class="dx-field-value">
+                    @(Html.DevExtreme().CheckBox().ID("AllDay").Name("AllDay")
+                        //.Value(Model.DatPhong != null ? Model.DatPhong.AllDay : false)
+                        .Value(Model.IsEdit ? Model.DatPhong.AllDay : false)
+                        .ValidationMessageMode(ValidationMessageMode.Always)
+                        .OnValueChanged("CheckAllDay")
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="dx-field row">
+            <div class="col">
                 <div class="dx-field-label">Loại phòng:</div>
                 <div class="dx-field-value">
                     @(Html.DevExtreme().DropDownBox().ID("LoaiId").Name("LoaiId")
@@ -139,7 +202,7 @@
                         .DataSourceOptions(s => s.Filter("['TrangThai', '=', false]"))
                         .DisplayExpr(new JS("loai_displayExpr"))
                         .ValueExpr("Id")
-                        .Value(Model.loaiID > 0 ? Model.loaiID : null)
+                        .Value(Model.loaiID > 0 ? Model.loaiID : null)                        
                         .ShowClearButton(true)
                         .ValidationMessageMode(ValidationMessageMode.Always)
                         .ContentTemplate(new TemplateName("listLoaiPhong"))
@@ -162,8 +225,8 @@
                         )
                         .DataSourceOptions(s => s.Filter("['TrangThai', '=', false]"))
                         .ValueExpr("Id")
-                        .DisplayExpr(new JS("phong_displayExpr"))
-                        .Value(Model.phongID > 0 ? Model.phongID : null)
+                        .DisplayExpr(new JS("phong_displayExpr"))                    
+                        .Value(Model.IsEdit ? Model.DatPhong.PhongId : (Model.phongID > 0 ? Model.phongID : null))
                         .ShowClearButton(true)
                         .ValidationMessageMode(ValidationMessageMode.Always)
                         .OnValueChanged(@<text>
@@ -180,50 +243,13 @@
         <div id="loading" style="display: none;color: #007bff; margin-top:5px;">
             &nbsp; <i class="fas fa-spinner"></i> Đang tải thông tin phòng ...
         </div>
-
-        <div class="dx-field row">
-            <div class="col">
-                <div class="dx-field-label">Từ ngày:</div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().DateBox().ID("TuNgay").Name("TuNgay")
-                        .Type(DateBoxType.DateTime).DisplayFormat("dd/MM/yyyy HH:mm:ss")
-                        .Value(Request.Query["start"].ToString() != "" ? DateTime.Parse(Request.Query["start"].ToString()) : DateTime.Now )
-                        .ValidationMessageMode(ValidationMessageMode.Always)
-                        .DisabledDates("DisabledDate")
-                        )
-                </div>
-            </div>
-            <div class="col">
-                <div class="dx-field-label">Đến ngày:</div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().DateBox().ID("DenNgay").Name("DenNgay")
-                        .Type(DateBoxType.DateTime).DisplayFormat("dd/MM/yyyy HH:mm:ss")
-                        .Value(Request.Query["end"].ToString() != "" ? DateTime.Parse(Request.Query["end"].ToString()) : DateTime.Now)
-                        .ValidationMessageMode(ValidationMessageMode.Always)
-                        .DisabledDates("DisabledDate")
-                        )
-                </div>
-            </div>
-        </div>
-        <div class="dx-field row" >
-            <div class="col" style="display:flex;">
-                <div class="dx-field-label" style="width: 15% !important;">Nguyên ngày:</div>
-                <div class="dx-field-value">
-                    @(Html.DevExtreme().CheckBox().ID("AllDay").Name("AllDay")
-                        .Value(Model.DatPhong != null ? Model.DatPhong.AllDay : false)
-                        .ValidationMessageMode(ValidationMessageMode.Always)
-                        .OnValueChanged("CheckAllDay")
-                        )
-                </div>
-            </div>           
-        </div>
-
+       
         <div class="dx-field row" style="margin-right: -15px !important; margin-left: -15px !important;">            
             <div class="col"> 
                 <div class="dx-field-label">Ghi chú:</div>
                 <div class="dx-field-value">
                     @(Html.DevExtreme().TextArea().ID("GhiChu").Name("GhiChu")
-                    .Height(100)
+                        .Height(100)
                         .ValidationMessageMode(ValidationMessageMode.Always)
                         )
                 </div>
@@ -234,57 +260,24 @@
 
    <div class="dx-field">
         @(Html.DevExtreme().Button()
-            .ID("btndat")
-            .Icon("far fa-calendar-alt")
-            .Text("Đặt phòng")
+            .ID("btndat")                       
+            .Text((Model.DatPhong != null && Model.DatPhong.Id > 0) ? "Cập nhật" : "Tạo đặt phòng")
             .Type(ButtonType.Success)
-           .UseSubmitBehavior(true)
-            )
+            .UseSubmitBehavior(true)
+         )
 
         @(Html.DevExtreme().Button()
-            .ID("btnhuy")
-            .Icon("fas fa-times")
+            .ID("btnhuy")           
             .Text("Hủy")
             .Type(ButtonType.Normal)
             .OnClick("function() { window.location.href = '/NhaKhach/LichDatPhong'; }")
-            )
+         )
+
+
    </div>
 
 </form>
 
-
-<!-- Danh sách người đặt -->
-@using (Html.DevExtreme().NamedTemplate("listNguoiDat"))
-{
-    @(Html.DevExtreme().DataGrid()
-        .ID("gridNguoiDat")
-        .DataSource(new JS(@"component.getDataSource()"))
-        .Columns(columns => {
-@*          columns.Add().DataField("Ho").Caption("Họ");
-            columns.Add().DataField("TenDem").Caption("Tên đệm");
-            columns.Add().DataField("Ten").Caption("Tên");
-            columns.Add().DataField("TaiKhoan[0].Email").Caption("Email"); *@
-            columns.Add().DataField("MaVienChuc").Caption("Mã viên chức").Width(100);
-            columns.Add().DataField("FullName").Caption("Họ tên");
-            columns.Add().DataField("TaiKhoan[0].Email").Caption("Email");            
-        })
-        .HoverStateEnabled(true)
-        .FilterRow(f => f.Visible(true))        
-        .ShowColumnHeaders(true)
-        .Height(300)
-        .Scrolling(s => s.Mode(GridScrollingMode.Infinite))
-        .Selection(s => s.Mode(SelectionMode.Single).ShowCheckBoxesMode(GridSelectionShowCheckBoxesMode.Always))
-        .SelectedRowKeys(new JS(@"component.option('value')"))
-        .OnSelectionChanged(@<text>
-            function (selectedItems){
-                var keys = selectedItems.selectedRowKeys;
-                var nguoidat = $("#NguoiDatId").dxDropDownBox("instance");
-                    nguoidat.option("value", keys[0]);
-                    nguoidat.close();
-            }
-        </text>)
-    )   
-}
 
 <!-- Danh sách loại phòng -->
 @using (Html.DevExtreme().NamedTemplate("listLoaiPhong"))
@@ -323,6 +316,7 @@
 
 
 <script>
+
     //Hiển trị người đặt
     function nguoidat_displayExpr(item) {
         if (!item) {
@@ -351,7 +345,7 @@
     function denghi_displayExpr(item){
         if(!item) {
             return "";
-        }
+        }      
         return "Đề nghị " + item.Id + " ( " + item.SoLuongKhach + " khách )";
     }
 
@@ -362,8 +356,7 @@
         const selectdate = new Date(pickdate.date);
               selectdate.setHours(0, 0, 0, 0);
 
-        return selectdate < today;
-       
+        return selectdate < today;       
     }
 
 
@@ -440,8 +433,7 @@
                     
                 var khach = $("#KhachId").dxLookup("instance");
                     khach.option("dataSource", data.loadkhach);
-                    console.log("data ", khach.option("dataSource"));
-
+                   
                 if (data.loadkhach.length > 0) {
                     khach.option("value", data.loadkhach[0].Id);
                 } else {
@@ -458,25 +450,19 @@
 
     // Set thời gian AllDay
     function CheckAllDay(data){
-        if (data.value) {        
+        if (data.value) {                
             const start = new Date($("#TuNgay").dxDateBox("instance").option("value"));           
             const end = new Date($("#DenNgay").dxDateBox("instance").option("value"));            
 
             $("#TuNgay").dxDateBox("instance").option("value", new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0));
             $("#DenNgay").dxDateBox("instance").option("value", new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 0));
 
-            $("#TuNgay").dxDateBox("instance").option("disabled", true);
-            $("#DenNgay").dxDateBox("instance").option("disabled", true);
-
             $("#TuNgay").dxDateBox({ readOnly: true });
             $("#DenNgay").dxDateBox({ readOnly: true });
 
         } else {
-            $("#TuNgay").dxDateBox("instance").option("value", new Date());
-            $("#DenNgay").dxDateBox("instance").option("value", new Date());
-
-            $("#TuNgay").dxDateBox("instance").option("disabled", false);
-            $("#DenNgay").dxDateBox("instance").option("disabled", false);
+            // $("#TuNgay").dxDateBox("instance").option("value", new Date());
+            // $("#DenNgay").dxDateBox("instance").option("value", new Date());
 
             $("#TuNgay").dxDateBox({ readOnly: false });
             $("#DenNgay").dxDateBox({ readOnly: false });
@@ -506,7 +492,14 @@
         if (start.getTime() > end.getTime()) {
             DevExpress.ui.notify("Thời gian bắt đầu không được lớn hơn thời gian kết thúc!", "warning", 3000);
             return false;
-        }          
+        }
+        //Ngày đặt từ ngày hiện tại về sau
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (start.getTime() < today.getTime()) {
+            DevExpress.ui.notify("Ngày đặt phòng phải từ ngày hiện tại trở về sau!! ", "warning", 3000);
+            return false;
+        }
         return true;
     }
 
@@ -520,25 +513,64 @@
         var formData = $(this).serialize();
         console.log("form ", formData);
 
-        $.ajax({
-            type: "POST",
-            url: window.location.pathname,
-            data: formData,
-            success: function (data) {
-                if (data.success) {
-                    DevExpress.ui.notify("Đặt phòng thành công", "success", 3000);
-                
-                    setTimeout(function () {
-                        window.location.href = "ChiTietLichDat?id=" + data.id;                        
-                    }, 1000);
-                } else {
-                    DevExpress.ui.notify(data.message, "error", 3000);
+        var datphongid = $("#DatPhongId").val();
+
+        if(datphongid && parseInt(datphongid) > 0){
+            //Chỉnh sửa
+            
+            $.ajax({
+                type: "POST",
+                url: 'TaoDatPhong?handler=EditLich',
+                data: formData,
+                success: function (data) {
+                    if (data.success) {
+                        DevExpress.ui.notify("Cập nhật lịch đặt thành công", "success", 3000);
+                        setTimeout(function () {
+                            window.location.href = '/NhaKhach/LichDatPhong';
+                        }, 1000);
+                    } else {
+                        DevExpress.ui.notify(data.message, "error", 3000);
+                    }
+                },
+            });
+
+        }else{
+            //Tạo mới
+
+            $.ajax({
+                type: "POST",
+                url: window.location.pathname,
+                data: formData,
+                success: function (data) {
+                    if (data.success) {
+                        DevExpress.ui.notify("Đặt phòng thành công", "success", 3000);
+
+                        setTimeout(function () {
+                            window.location.href = "ChiTietLichDat?id=" + data.id;
+                        }, 1000);
+                    } else {
+                        DevExpress.ui.notify(data.message, "error", 3000);
+                    }
+                },
+                error: function () {
+                    DevExpress.ui.notify("Có lỗi trong quá trình đặt lịch", "error", 3000);
                 }
-            },
-            error: function () {
-                DevExpress.ui.notify("Có lỗi trong quá trình đặt lịch", "error", 3000);
-            }
-        });
+            });
+        }       
+    });
+
+    $(document).ready(function () {
+        const isAllDay = @(Model.IsEdit && (Model.DatPhong.AllDay ?? false) ? "true" : "false");
+
+       if(isAllDay === true){
+            $("#TuNgay").dxDateBox({ readOnly: true });
+            $("#DenNgay").dxDateBox({ readOnly: true });
+       }
+       else{    
+            $("#TuNgay").dxDateBox({ readOnly: false });
+            $("#DenNgay").dxDateBox({ readOnly: false });
+       }
+
     });
 
 

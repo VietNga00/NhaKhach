@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using TMSWeb_Core.Models;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
+    [Authorize(Roles = "Administrators")]
     public class DanhSachKhachModel : PageModel
     {
         public async Task<IActionResult> OnGetAsync()

@@ -13,7 +13,7 @@ using TMSWeb_Core.Models;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
-    [Authorize(Roles = "Users,Administrators")]
+    
     [IgnoreAntiforgeryToken]
     public class ChiTietLichDatModel : PageModel
     {
@@ -45,6 +45,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
 
             string url = Request.Path;
             string email = User.FindFirst("Email").Value;
+          
             if (!(await common.checkRoleAsync(email, url, "Create", HttpContext.GetTokenAsync("access_token").Result)))
             {
                 return new RedirectToPageResult("NhaKhach/AccessDeny");
@@ -69,7 +70,6 @@ namespace TMSWeb_Core.Pages.NhaKhach
                     DeNghi = _dbContext.GhDeNghi.FirstOrDefault(d => d.Id == DatPhong.DeNghiId);
                     DonVi = _dbContext.DonVi.FirstOrDefault(d => d.Id == DeNghi.DonViId);
                     Khach = _dbContext.GhDanhSachKhach.Where(k => k.Id == DatPhong.KhachId).ToList();
-
                 }
                 else
                 {
@@ -101,7 +101,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             }
             else
             {
-                DatPhong.TinhTrangId = 4; // Đã hủy
+                DatPhong.TinhTrangId = 7; // Đã hủy
                 DatPhong.NgayHuy = DateTime.Now;
                 DatPhong.NguoiHuyId = (int)VienChucId;
 
@@ -111,6 +111,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
 
             return new JsonResult(new { success = true });
         }
+
 
     }
 }

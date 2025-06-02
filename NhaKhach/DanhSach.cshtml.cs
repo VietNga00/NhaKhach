@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Simple.OData.Client;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,13 +22,16 @@ namespace TMSWeb_Core.Pages.NhaKhach
         public GhDatPhong DatPhong { get; set; }
         public GhDeNghi DeNghi { get; set; }
         public int? VienChucId { get; set; } = 0;
+        public List<GhDanhSachKhach> DanhSachKhach { get; set; } = new();
+
+
 
         public async Task<IActionResult> OnGetAsync()
         {
             var accessToken = common.RefreshAccessToken(HttpContext);
 
             string email = User.FindFirst("Email").Value;
-                  
+
             var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
             var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
             this.VienChucId = taikhoan.VienChucId;
@@ -51,7 +55,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 bool ischeck = dskhach.Count() == solich;
                 if (isStatus && ischeck)
                 {
-                    dn.TinhTrangId = 8; //Hoàn tất
+                    dn.TinhTrangId = 6; //Hoàn tất
                 }
             }
             _dbContext.SaveChanges();
@@ -73,11 +77,20 @@ namespace TMSWeb_Core.Pages.NhaKhach
             DeNghi = await client.For<GhDeNghi>().Filter(f => f.Id == id).FindEntryAsync();
             if (DeNghi != null)
             {
-                DeNghi.TinhTrangId = 4; //Đã hủy             
-                //DeNghi.NgayHuy = DateTime.Now;
-                //DeNghi.NguoiHuyId = (int)VienChucId;
-
+                DeNghi.TinhTrangId = 7; //Đã hủy                            
                 _dbContext.GhDeNghi.Update(DeNghi);
+
+                // Cập nhật trạng thái khách
+                DanhSachKhach = _dbContext.GhDanhSachKhach.Where(d => d.DeNghiId == DeNghi.Id).ToList();
+                if (DanhSachKhach.Any())
+                {
+                    foreach (var khach in DanhSachKhach)
+                    {
+                        khach.TrangThai = 3; // Hủy
+                        khach.IsCancel = true; // Đề nghị đã hủy
+                        _dbContext.GhDanhSachKhach.Update(khach);
+                    }
+                }
                 _dbContext.SaveChanges();
                 return new JsonResult(new { success = true });
             }

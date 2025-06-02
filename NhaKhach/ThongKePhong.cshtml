@@ -16,9 +16,9 @@
                     {
                         PhongId = phong.Id,
                         MaPhong = phong.MaPhong,
-                        SoLichDat = tk?.SoLichDat ?? 0,
-                        SoLichHuy = tk?.SoLichHuy ?? 0,
-                        SoLichQuaHan = tk?.SoLichQuaHan ?? 0,
+                        LichHopLe = tk?.LichHopLe ?? 0,
+                        LichHuy = tk?.LichHuy ?? 0,
+                        LichQuaHan = tk?.LichQuaHan ?? 0,
                     }).ToList();
 }
 
@@ -79,9 +79,9 @@
             </text>))
        )       
         .Series(series => {
-            series.Add().ValueField("SoLichDat").Name("Lịch đặt").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b30000");
-            series.Add().ValueField("SoLichHuy").Name("Lịch hủy").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#808080");
-            series.Add().ValueField("SoLichQuaHan").Name("Lịch quá hạn").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b8b894");
+            series.Add().ValueField("LichHopLe").Name("Lịch hợp lệ").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b30000");
+            series.Add().ValueField("LichHuy").Name("Lịch hủy").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#808080");
+            series.Add().ValueField("LichQuaHan").Name("Lịch quá hạn").Type(SeriesType.Bar).Axis("LichDatAxis").Color("#b8b894");
         })
         .Legend(l => l
             .VerticalAlignment(VerticalEdge.Top)
@@ -101,7 +101,7 @@
             }</text>)
         )           
     )
-</div>
+</div> 
 
 <hr>
 
@@ -122,16 +122,17 @@
             columns.AddFor(m => m.Nam).Caption("Năm").GroupIndex(0);
             columns.AddFor(m => m.Thang).Caption("Tháng");
             columns.AddFor(m => m.Phong.MaPhong).Caption("Phòng");
-            columns.AddFor(m => m.SoLichDat).Caption("Tổng lịch đặt");
-            columns.AddFor(m => m.SoLichHuy).Caption("Tổng lịch hủy");
-            columns.AddFor(m => m.SoLichQuaHan).Caption("Tổng lịch quá hạn");           
+            columns.AddFor(m => m.TongSoLich).Caption("Tổng lịch đặt");
+            columns.AddFor(m => m.LichHopLe).Caption("Số lịch hợp lệ");
+            columns.AddFor(m => m.LichHuy).Caption("Số lịch hủy");
+            columns.AddFor(m => m.LichQuaHan).Caption("Số lịch quá hạn");           
         })
         .Summary(s => s
             .TotalItems(items =>
             {
-                items.AddFor(m => m.SoLichDat).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
-                items.AddFor(m => m.SoLichHuy).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
-                items.AddFor(m => m.SoLichQuaHan).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.LichHopLe).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.LichHuy).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.LichQuaHan).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
             })
         )
         .FilterRow(filterRow => filterRow.Visible(true))

@@ -70,6 +70,8 @@ namespace TMSWeb_Core.Pages.NhaKhach
             return Page();
         }
 
+
+
         //Nhận phòng
         public async Task<IActionResult> OnPostNhanLich(int lichId)
         {
@@ -88,7 +90,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             DatPhong = _dbContext.GhDatPhong.FirstOrDefault(d => d.Id == lichId);        
             if (DatPhong != null)
             {
-                DatPhong.TinhTrangId = 2; // Đã nhận phòng
+                DatPhong.TinhTrangId = 5; // Đã nhận phòng
                 _dbContext.GhDatPhong.Update(DatPhong);
             }
 
@@ -98,7 +100,6 @@ namespace TMSWeb_Core.Pages.NhaKhach
                 NgayNhan = DateTime.Now,
                 NguoiThucHienId = (int)VienChucId
             };
-
             _dbContext.GhNhanPhong.Add(NhanPhong);
             _dbContext.SaveChanges();
 
@@ -128,40 +129,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
             return new JsonResult(datalich);
         }
 
-        /* Cập nhật thời gian lịch */
-        public async Task<IActionResult> OnPostUpdateLich(int idlich, DateTime tungay, DateTime denngay, bool cangay)
-        {          
-            var accessToken = common.RefreshAccessToken(HttpContext);
-
-            string email = User.FindFirst("Email").Value;
-            var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
-            var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
-            this.VienChucId = taikhoan.VienChucId;
-
-            DatPhong = _dbContext.GhDatPhong.FirstOrDefault(d => d.Id == idlich);
-            if (DatPhong == null)
-            {
-                return new JsonResult(new { success = false, message = "Không tìm thấy lịch đặt!" });
-            }           
-            //Kiểm tra có lịch nào trùng không
-            bool kiemtra = _dbContext.GhDatPhong.Any(d => d.PhongId == DatPhong.PhongId && d.Id != DatPhong.Id && (d.TinhTrangId == 1 || d.TinhTrangId == 2 ) && !(denngay <= d.TuNgay || tungay >= d.DenNgay) );           
-            //((tungay >= d.TuNgay && tungay < d.DenNgay) || (denngay >= d.TuNgay && denngay < d.DenNgay) || (tungay <= d.TuNgay && denngay >= d.DenNgay))
-
-            if (kiemtra)
-            {
-                return new JsonResult(new { success = false, message = "Thời gian mới bị trùng với lịch đặt khác!" });
-            }
-            DatPhong.TuNgay = tungay;
-            DatPhong.DenNgay = denngay;
-            DatPhong.AllDay = cangay;
-
-            _dbContext.GhDatPhong.Update(DatPhong);
-            await _dbContext.SaveChangesAsync();
-
-            return new JsonResult(new { success = true });
-        }
-
-
+       
         /* Trả phòng */      
         public async Task<IActionResult> OnPostTraPhong(int lichId)
         {
@@ -180,15 +148,15 @@ namespace TMSWeb_Core.Pages.NhaKhach
             DatPhong = _dbContext.GhDatPhong.FirstOrDefault(d => d.Id == lichId);           
             if (DatPhong != null)
             {
-                DatPhong.TinhTrangId = 3; // Trả phòng -> Hoàn thành
+                DatPhong.TinhTrangId = 6; // Trả phòng -> Hoàn thành
                 _dbContext.GhDatPhong.Update(DatPhong);              
             }
-            var tongthoigian = DatPhong.DenNgay - DatPhong.TuNgay;
+            TimeSpan? tongthoigian = DatPhong.DenNgay - DatPhong.TuNgay;
            
             TraPhong = new GhTraPhong
             {
                 DatPhongId = lichId,
-                TongThoiGian = $"{tongthoigian.Hours + tongthoigian.Days * 24} giờ {tongthoigian.Minutes} phút",
+                TongThoiGian = $"{tongthoigian.Value.Hours + tongthoigian.Value.Days * 24} giờ {tongthoigian.Value.Minutes} phút",
                 NgayTra = DateTime.Now,
                 NguoiThucHienId = (int)VienChucId
             };

@@ -40,7 +40,7 @@
     .Columns(columns =>
     {
         columns.Add().Caption(" ").CellTemplate(new JS("SoThuTu"));
-        columns.AddFor(m => m.MaLoai).Caption("Mã loại");
+        columns.AddFor(m => m.MaLoai).Caption("Mã loại").Name("MaLoai");
         columns.AddFor(m => m.TenLoai).Caption("Tên loại");
         columns.AddFor(m => m.MoTa).Caption("Mô tả");
         columns.AddFor(m => m.SoLuongToiDa).Caption("Số lượng tối đa");      
@@ -70,7 +70,7 @@
     })
     .Summary(s => s.TotalItems(items =>
         {
-            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).DisplayFormat("Tổng: {0} loại");
+            items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("MaLoai").DisplayFormat("Tổng: {0} loại");
         })
     )
     .Editing(e => e
@@ -89,7 +89,7 @@
         )
         .Form(f => f.ID("form").ColCount(2).Items(items =>
         {
-            items.AddSimpleFor(m => m.MaLoai).IsRequired(true);
+            items.AddSimpleFor(m => m.MaLoai).IsRequired(true).HelpText("Vd: LP1,...");
             items.AddSimpleFor(m => m.TenLoai).IsRequired(true);
             items.AddSimpleFor(m => m.MoTa).IsRequired(true);
             items.AddSimpleFor(m => m.SoLuongToiDa).Editor(e => e.SelectBox()
