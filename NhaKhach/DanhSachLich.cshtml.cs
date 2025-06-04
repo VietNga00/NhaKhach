@@ -2,13 +2,16 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Newtonsoft.Json;
 using Simple.OData.Client;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using TMS_ModelCore.Models;
 using TMSWeb_Core.Models;
+using static TMSWeb_Core.Pages.NhaKhach.DanhSachLichModel;
 
 namespace TMSWeb_Core.Pages.NhaKhach
 {
@@ -26,6 +29,14 @@ namespace TMSWeb_Core.Pages.NhaKhach
         public GhDanhSachKhach DanhSachKhach {  get; set; }
         public int? VienChucId = 0;
 
+        [BindProperty]
+        public List<ListLichDuyet> ListLich { get; set; } 
+
+        [BindProperty]
+        public List<ListPhanHoi> ListPhanHoi { get; set; }
+    
+
+
         public async Task<IActionResult> OnGetAsync()
         {
             var accessToken = common.RefreshAccessToken(HttpContext);
@@ -39,52 +50,59 @@ namespace TMSWeb_Core.Pages.NhaKhach
             return Page();
         }
 
-
-        //Duyệt lịch
-        public async Task<IActionResult> OnPostDuyetLich(int lichId, int khachId)
-        {
+        //Duyệt nhiều lịch
+        public async Task<IActionResult> OnPostDuyetNhieuLich([FromBody] List<ListLichDuyet> ListLich)
+        {           
             var accessToken = common.RefreshAccessToken(HttpContext);
+
             string email = User.FindFirst("Email").Value;
             var client = new ODataClient(common.SetODataToken(HttpContext.GetTokenAsync("access_token").Result));
             var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
             this.VienChucId = taikhoan.VienChucId;
 
-            DatPhong = _dbContext.GhDatPhong.Where(d => d.Id == lichId).FirstOrDefault();
-            if (DatPhong == null)
+            var lichtrung = new List<object>();
+
+            foreach (var list in ListLich.OrderBy(x => x.lichId))
             {
-                return new JsonResult(new { success = false, message = "Không tìm thấy thông tin lịch đặt" });
-            }
-            else
-            {                
-                var isTrungLich = await client.For<GhDatPhong>().Filter(d => d.Id != DatPhong.Id && d.PhongId == DatPhong.PhongId && (d.TinhTrangId == 4 || d.TinhTrangId == 5) && d.TuNgay <= DatPhong.DenNgay && d.DenNgay >= DatPhong.TuNgay).FindEntriesAsync();
-                if (isTrungLich.Any())
+                DatPhong = _dbContext.GhDatPhong.FirstOrDefault(x => x.Id == list.lichId);
+                if (DatPhong == null) continue;
+
+                //Lịch trùng
+                var Istrung = await client.For<GhDatPhong>().Filter(d => d.Id != DatPhong.Id && d.PhongId == DatPhong.PhongId && (d.TinhTrangId == 4 || d.TinhTrangId == 5) && d.TuNgay <= DatPhong.DenNgay && d.DenNgay >= DatPhong.TuNgay).FindEntriesAsync();
+                if (Istrung.Any())
                 {
-                    return new JsonResult(new {success = false, phanhoi = true });
+                    var khach = _dbContext.GhDanhSachKhach.FirstOrDefault(k => k.DeNghiId == DatPhong.DeNghiId);
+                    lichtrung.Add(new { Id = list.lichId, KhachId = list.khachId });
+                    continue;
                 }
 
-                DatPhong.TinhTrangId = 4; //duyệt lịch -> đã đặt
+                //Duyệt lịch
+                DatPhong.TinhTrangId = 4;  //Lịch đã duyệt
                 DatPhong.NguoiDuyetId = (int)VienChucId;
                 DatPhong.NgayDuyet = DateTime.Now;
 
-                _dbContext.GhDatPhong.Update(DatPhong);
 
                 // Cập nhật trạng thái khách
-                DanhSachKhach = _dbContext.GhDanhSachKhach.Where(d => d.Id == khachId).FirstOrDefault();
+                DanhSachKhach = _dbContext.GhDanhSachKhach.Where(d => d.Id == list.khachId).FirstOrDefault();
                 if (DanhSachKhach != null)
                 {
                     DanhSachKhach.TrangThai = 1; //Lịch đã duyệt
                     _dbContext.GhDanhSachKhach.Update(DanhSachKhach);
                 }
-                _dbContext.SaveChanges();
+                await _dbContext.SaveChangesAsync();
 
-                return new JsonResult(new { success = true });
-            }           
+            }
+            if (lichtrung.Any())
+            {               
+                return new JsonResult(new { success = false, phanhoi = true, lichTrung = lichtrung });
+            }
+            return new JsonResult(new { success = true });
         }
 
-
+    
         //Phản hồi không duyệt
-        public async Task<IActionResult> OnPostPhanHoiLich(int lichId, string ghichu, int khachId)
-        {
+        public async Task<IActionResult> OnPostPhanHoiLich([FromBody] List<ListPhanHoi> ListPhanHoi )
+        {         
             var accessToken = common.RefreshAccessToken(HttpContext);
 
             string email = User.FindFirst("Email").Value;
@@ -92,32 +110,45 @@ namespace TMSWeb_Core.Pages.NhaKhach
             var taikhoan = await client.For<TaiKhoan>().Filter(f => f.Email == email).FindEntryAsync();
             this.VienChucId = taikhoan.VienChucId;
 
-            DatPhong = _dbContext.GhDatPhong.Where(d => d.Id == lichId).FirstOrDefault();
-            if(DatPhong == null)
+            foreach (var item in ListPhanHoi.OrderBy(x => x.lichId))
             {
-                return new JsonResult(new { success = false, message = "Không tìm thấy thông tin lịch đặt" });
-            }
-            else
-            {
-                DatPhong.TinhTrangId = 3; //Không duyệt
-                DatPhong.GhiChu = ghichu;
-                DatPhong.NguoiDuyetId = (int)VienChucId;
-                DatPhong.NgayDuyet = DateTime.Now;
+                var datPhong = _dbContext.GhDatPhong.FirstOrDefault(d => d.Id == item.lichId);
+                if (datPhong == null) continue;
 
-                _dbContext.GhDatPhong.Update(DatPhong);
+                datPhong.TinhTrangId = 3; // Không duyệt
+                datPhong.GhiChu = item.ghichu;
+                datPhong.NguoiDuyetId = (int)VienChucId;
+                datPhong.NgayDuyet = DateTime.Now;
+                _dbContext.GhDatPhong.Update(datPhong);
 
-                //cập nhật trạng thái khách
-                DanhSachKhach = _dbContext.GhDanhSachKhach.Where(d => d.Id == khachId).FirstOrDefault();
-                if (DanhSachKhach != null)
+                var khach = _dbContext.GhDanhSachKhach.FirstOrDefault(k => k.Id == item.khachId);
+                if (khach != null)
                 {
-                    DanhSachKhach.TrangThai = 2; //Không duyệt
-                    _dbContext.GhDanhSachKhach.Update(DanhSachKhach);
+                    khach.TrangThai = 2; // Không duyệt
+                    _dbContext.GhDanhSachKhach.Update(khach);
                 }
-                _dbContext.SaveChanges();
-
-                return new JsonResult(new { success = true });
             }
+            await _dbContext.SaveChangesAsync();
+
+            return new JsonResult(new { success = true });
         }
 
     }
+
+
+
+
+    public class ListLichDuyet
+    {
+        public int lichId { get; set; }
+        public int khachId { get; set; }
+    }
+
+    public class ListPhanHoi
+    {
+        public int lichId { get; set; }
+        public int khachId { get; set; }
+        public string ghichu { get; set; }
+    }
+
 }

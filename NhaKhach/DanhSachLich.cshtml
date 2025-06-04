@@ -59,9 +59,21 @@
                     .OnItemClick("TabsItemClick")
                     )
 
+
                 <!-- Lịch chờ duyệt -->
                <div id="LichChoDuyet" style="display: block;">
                     <br />
+                    <div style="margin-bottom: 20px;">
+                        @(Html.DevExtreme().Button()
+                            .ID("btnDuyet")
+                            .Icon("fas fa-check")
+                            .Text("Duyệt nhiều lịch")
+                            .Type(ButtonType.Default)
+                            .Width("Auto")
+                            .OnClick("DuyetNhieuLich")
+                            )
+                    </div>
+
                     @(Html.DevExtreme().DataGrid<GhDatPhong>()
                         .ID("gridLichChoDuyet")
                         .DataSource(d => d.OData().Version(4)
@@ -71,19 +83,13 @@
                         .DataSourceOptions(s => s.Filter(new JS("['TinhTrangId', '=', 2]")))
                         .ShowBorders(true)
                         .FocusedRowEnabled(true)
-                        .FocusedRowIndex(0)            
-                        .Selection(s => s.Mode(SelectionMode.Single))
+                        .FocusedRowIndex(0)                                 
                         .FilterRow(f => f.Visible(true))
                         .ColumnAutoWidth(true)
                         .AllowColumnResizing(true)
                         .ColumnHidingEnabled(true)                      
                         .Columns(columns =>
-                        {
-                             columns.Add().Type(GridCommandColumnType.Buttons) .Width(75)
-                                .Buttons(b =>
-                                {                                   
-                                    b.Add().Hint("Duyệt lịch").Icon("far fa-calendar-check").Text("Duyệt lịch").CssClass("custom-button").OnClick("DuyetLich");
-                                });
+                        {                            
                             columns.AddFor(m => m.Id).Caption("Mã đặt phòng").Width(60);
                             columns.AddFor(m => m.DeNghiId).Caption("Mã đề nghị").Width(60);
                             columns.AddFor(m => m.NguoiDat.FullName).Caption("Người đặt").Name("NguoiDat").MinWidth(130);
@@ -95,11 +101,11 @@
                             columns.AddFor(m => m.NgayTao).Visible(false).SortOrder(SortOrder.Asc);
 
                         })                                               
-                        @* .Selection(s => s
+                        .Selection(s => s
                             .Mode(SelectionMode.Multiple)
                             .ShowCheckBoxesMode(GridSelectionShowCheckBoxesMode.Always)
                             .SelectAllMode(SelectAllMode.AllPages)
-                        ) *@
+                        )
                         .Summary(s => s.TotalItems(items =>
                         {
                             items.AddFor(m => m.Id).SummaryType(SummaryType.Count).ShowInColumn("NguoiDat").DisplayFormat("Tổng: {0} lịch");
@@ -141,14 +147,8 @@
                             .ShowPageSizeSelector(true)
                             .AllowedPageSizes(new JS("[10, 20, 40, 'all']"))
                             .ShowInfo(true)
-                        )
-                        .OnSelectionChanged(@<text>
-                            function(e) {                                
-                                e.component.collapseAll(-1);
-                                e.component.expandRow(e.currentSelectedRowKeys[0]);
-                            }
-                        </text>)
-                        @* .OnRowClick(@<text>
+                        )                       
+                        .OnRowClick(@<text>
                             function(e) {                           
                                 if ( $(e.event.target).closest(".dx-checkbox").length === 0) {                           
                                     const rowKey = e.key;                          
@@ -161,7 +161,7 @@
                                     }
                                 }
                             }
-                        </text>) *@
+                        </text>)
 
                      )
                 </div> 
@@ -274,7 +274,9 @@
                 <p>Vui lòng nhập lý do không thể duyệt để gửi phản hồi.</p>
                 <p style="font-style: italic;">Vd: Lịch đặt bị trùng phòng</p>
             </div> <br/>
-            <div class="dx-field">
+            <div class="dx-field">           
+                <input type="hidden" id="lichConLai" />
+
                 <div class="dx-field-label">Mã đặt phòng:</div>
                 <div class="dx-field-value">
                     @(Html.DevExtreme().TextBox()
@@ -328,77 +330,101 @@
         }
     }
 
-    /* Duyệt lịch */
 
-    //Duyệt lịch
-    function DuyetLich(e) {
-        var id = e.row.data.Id;      
-        var khach = e.row.data.KhachId;        
+    //Show popup 
+    function showPopup(lichTrung) {
+        const popup = $("#popupphanhoi").dxPopup("instance");
+              popup.option("onShown", function (){
+                  $("#malich").dxTextBox("instance").option("value", lichTrung.Id);
+                  $("#khachid").val(lichTrung.KhachId);
+                  $("#GhiChu").dxTextArea("instance").option("value", "");
+              });
+              popup.show();
+    }
 
-        DevExpress.ui.dialog.confirm("Bạn có chắc chắn muốn duyệt lịch này? ", "Xác nhận").then(function (result) {
-            if (result) {
-                $.ajax({
-                    type: "POST",
-                    url: 'DanhSachLich?handler=DuyetLich',
-                    data: { lichId: id, khachId: khach },
-                    success: function (data) {
-                        if (data.success) {
-                            DevExpress.ui.notify("Lịch đã được duyệt thành công", "success", 3000);
-                            location.reload();
-                        } else {
-                            if (data.phanhoi) {
-                                var popup = $("#popupphanhoi").dxPopup("instance");
-                                popup.show();
+    //Duyệt nhiều lịch
+    function DuyetNhieuLich() {
+        const selectedRows = $("#gridLichChoDuyet").dxDataGrid("instance").getSelectedRowsData();
+        if (selectedRows.length === 0) {
+            DevExpress.ui.notify("Vui lòng chọn ít nhất một lịch để duyệt", "warning", 3000);
+            return;
+        }
 
-                                popup.option("onShown", function () {
-                                    $("#malich").dxTextBox("instance").option("value", id);
-                                    $("#khachid").val(khach);
-                                });
-                            } else {
-                                DevExpress.ui.notify(data.message, "error", 3000);
-                            }
-                        }
-                    },
-                    error: function () {
-                        DevExpress.ui.notify("Có lỗi xảy ra trong quá trình duyệt lịch", "error", 3000);
-                    }
-                });
+        const danhsachlich = selectedRows.map(row => ({ lichId: row.Id, khachId: row.KhachId }));
+
+        $.ajax({
+            type: "POST",
+            url: 'DanhSachLich?handler=DuyetNhieuLich',
+            data: JSON.stringify( danhsachlich ),
+            contentType: "application/json",
+            success: function (data) {
+                if (data.lichTrung?.length > 0) {
+                    sessionStorage.setItem("lichTrung", JSON.stringify(data.lichTrung));                   
+                    showPopup(data.lichTrung[0]);  
+                    
+                } else if (data.success) {
+                    DevExpress.ui.notify("Đã duyệt lịch thành công", "success", 3000);
+                    location.reload();
+
+                } else {
+                    DevExpress.ui.notify("Có lỗi xảy ra", "error", 3000);
+                }
+            },
+            error: function () {
+                DevExpress.ui.notify("Có lỗi xảy ra trong quá trình duyệt lịch", "error", 3000);
             }
         });
     }
 
-    //Phản hồi không duyệt   
+
+
+    //Phản hồi lịch trùng
     function confirmPhanHoi(e) {
-        var id = $("#malich").dxTextBox("instance").option("value");
-        var khach = $("#khachid").val();
-        console.log("khach ", khach);
-        var ghichu = $("#GhiChu").dxTextArea("instance").option("value");
+        const id = parseInt($("#malich").dxTextBox("instance").option("value"));
+        const khachId = $("#khachid").val();
+        const ghichu = $("#GhiChu").dxTextArea("instance").option("value");
+
+        console.log("khach ", khachId);
      
         if (ghichu == "") {
             DevExpress.ui.notify("Vui lòng nhập lý do phản hồi", "warning", 3000);
             return;
         }
+
+        const danhsach = [{ lichId: id, khachId: khachId, ghichu: ghichu }];
+
+
         $.ajax({
             type: "POST",
-            url: 'DanhSachLich?handler=PhanHoiLich',
-            data: { lichId: id, ghichu: ghichu, khachId: khach },
+            url: 'DanhSachLich?handler=PhanHoiLich',           
+            data: JSON.stringify( danhsach ),
+            contentType: "application/json",
             success: function (data) {
                 if (data.success) {
-                    DevExpress.ui.notify("Phản hồi không duyệt lịch thành công", "success", 3000);
+                    DevExpress.ui.notify("Phản hồi thành công", "success", 3000);
                     $("#popupphanhoi").dxPopup("instance").hide();
-                    location.reload();
-                } else {
-                    DevExpress.ui.notify(data.message, "error", 3000);
+
+                    let hangDoi = JSON.parse(sessionStorage.getItem("lichTrung") || "[]");
+                    hangDoi = hangDoi.filter(x => x.Id !== id);
+
+                    if (hangDoi.length > 0) {
+                        sessionStorage.setItem("lichTrung", JSON.stringify(hangDoi));
+                        showPopup(hangDoi[0]);
+
+                    } else {
+                        sessionStorage.removeItem("lichTrung");      
+                        location.reload();
+                    }
                 }
             },
             error: function () {
-                DevExpress.ui.notify("Có lỗi xảy ra trong quá trình phản hồi lịch", "error", 3000);
+                DevExpress.ui.notify("Lỗi phản hồi", "error", 3000);
             }
         });
     }
 
 
-   
+ 
 
     /* Danh sách lịch */
 

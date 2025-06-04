@@ -120,6 +120,7 @@
             .TotalItems(items =>
             {
                 items.AddFor(m => m.TongSoLichDat).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
+                items.AddFor(m => m.TongLichHopLe).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.TongLichHuy).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.TongLichQuaHan).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.TongSoKhach).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} khách");

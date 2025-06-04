@@ -45,7 +45,7 @@ namespace TMSWeb_Core.Pages.NhaKhach
 
             if (denghiID.HasValue)
             {
-                this.DeNghi = await client.For<GhDeNghi>().Key(denghiID.Value).FindEntryAsync();                              
+                this.DeNghi = await client.For<GhDeNghi>().Key(denghiID.Value).FindEntryAsync();
                 if(DeNghi == null)
                 {
                     return NotFound();

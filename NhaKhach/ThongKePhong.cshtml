@@ -109,6 +109,7 @@
 <!-- Datagrid -->
 <div style="margin-top: 50px;">
     <p style="font-weight:bold; font-size:25px;text-align:center">Thống kê chi tiết phòng nhà khách</p>
+
     @(Html.DevExtreme().DataGrid<GhThongKePhong>()
         .ID("gridThongKe")
         .ShowBorders(true)
@@ -130,6 +131,7 @@
         .Summary(s => s
             .TotalItems(items =>
             {
+                items.AddFor(m => m.TongSoLich).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.LichHopLe).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.LichHuy).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");
                 items.AddFor(m => m.LichQuaHan).SummaryType(SummaryType.Sum).DisplayFormat("Tổng: {0} lịch");

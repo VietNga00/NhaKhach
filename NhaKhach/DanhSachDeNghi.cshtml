@@ -306,9 +306,9 @@
 
     function ChangedLich(e){
         var lichId = e.row.data.Id;        
-        var time = new Date(e.row.data.TuNgay).toLocaleDateString();
-        var today = new Date().toLocaleDateString();        
-       
+        var time = new Date(e.row.data.TuNgay);
+        var today = new Date();        
+
         if (time <= today) {
             DevExpress.ui.notify("Đã quá hạn! Không thể đổi phòng cho lịch", "warning", 3000);
             return;
@@ -317,14 +317,7 @@
     }
 
 
-    // //In đề nghị thuê ngoài
-    // function PrintLichNgoai(e) {
-    //     console.log("id ", e.row.data.Id);
-    //     console.log("khach ", e.row.data.KhachId);
-    //     console.log("denghi ", e.row.data.DeNghiId);
-
-    //    // window.location.href = 'InDeNghi?denghi=' + e.row.data.Id;
-    // }
+  
    
 
 
